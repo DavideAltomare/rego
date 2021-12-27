@@ -1,0 +1,54 @@
+Metadata-Version: 1.2.1
+Name: rego
+Version: 1.2.1
+Summary: Automatic time series forecasting and missing values imputation.
+### Home-page: 
+Author: Davide Altomare, David Loris
+Author-email: info@channelattribution.net
+Project-URL: Documentation, https://channelattribution.net/docs/rego
+Project-URL: Code, https://github.com/DavideAltomare/rego
+Project-URL: Issue tracker, https://github.com/DavideAltomare/rego/issues
+Description: Automatic time series forecasting and missing values imputation.
+======================
+
+Purpose
+-------
+
+rego is a machine learning algorithm for predicting and imputing time series. It can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the regressors if present. It can address large problems with hundreds or thousands of regressors and problems in which the number of regressors is greater than the number of observations. Moreover it can be used not only with time series but also with any other real valued target variable. The algorithm implemented includes a bayesian stochastic search methodology for model selection and a robust estimation based on boostrapping. rego is fast because all the code is C++.
+
+Installation
+------------
+
+### From PyPi
+
+```bash
+pip install --upgrade setuptools
+pip install Cython
+pip install pandas
+pip install rego
+
+```
+        
+Platform: UNKNOWN
+Development Status :: 5 - Production/Stable
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: C++
+Classifier: Programming Language :: Cython
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Requires-Python: >=3.4
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+Provides-Extra: docs
