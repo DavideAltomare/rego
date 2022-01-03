@@ -1,4 +1,4 @@
-//rego: Automatic time series forecasting and missing values imputation.
+//rego: Automatic time series forecasting and missing value imputation.
 //
 //Copyright (C) Davide Altomare and David Loris <channelattribution.io>
 //

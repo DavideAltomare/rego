@@ -4,9 +4,9 @@
 \alias{regpred}
 
 
-\title{Automatic time series prediction and missing values imputation.}
+\title{Automatic Time Series forecasting and Missing Value Imputation.}
 
-\description{Automatic time series prediction and missing values imputation.}
+\description{Automatic time series prediction and missing value imputation.}
 
 
 

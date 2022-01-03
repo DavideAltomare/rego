@@ -1,8 +1,8 @@
 
 """
 
-**Automatic time series forecasting and missing values imputation.**
-rego is intended for predicting and imputing time series. Its algorithm can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the regressors if present. It can address large problems with hundreds or thousands of regressors and problems in which the number of regressors is greater than the number of observations. Moreover it can be used not only for time series but also for any other real valued target variable. The algorithm implemented includes a bayesian stochastic search methodology for model selection and a robust estimation method based on boostrapping. rego is fast because all the code is C++. 
+**Automatic Time Series Forecasting and Missing Value Imputation.**
+rego is intended for predicting and imputing time series. Its algorithm can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the regressors if present. It can address large problems with hundreds or thousands of dependent variables and problems in which the number of dependent variables is greater than the number of observations. Moreover it can be used not only for time series but also for any other real valued target variable. The algorithm implemented includes a Bayesian stochastic search methodology for model selection and a robust estimation method based on bootstrapping. rego is fast because all the code is C++. 
 
 """
         

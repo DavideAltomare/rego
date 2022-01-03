@@ -1,4 +1,4 @@
-# rego: Automatic time series forecasting and missing values imputation.
+# rego: Automatic Time Series Forecasting and Missing Value Imputation
 #
 # Copyright (C) Davide Altomare and David Loris <channelattribution.io>
 # 
@@ -60,12 +60,12 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
  
     res$final$predictions=as.data.frame(res$final$predictions)
     colnames(res$final$predictions)=c('real', 'fitted', 'upper_bound','predicted','lower_bound')
-    res$final$predictions=within(res$final$predictions, rm(fitted))
+    res$final$predictions=res$final$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
 
 	 res$forward$predictions=as.data.frame(res$forward$predictions)
 	 if(nrow(res$forward$predictions)>0){
 	   colnames(res$forward$predictions)=c('real','fitted', 'upper_bound','predicted','lower_bound')
-      res$forward$predictions=within(res$forward$predictions, rm(fitted))
+      res$forward$predictions=res$forward$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
       if(length(res$forward$var_x_names)>0){
         res$forward$var_x_names=cols_Y[res$forward$var_x_names]  
       }
@@ -74,7 +74,7 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
     res$backward$predictions=as.data.frame(res$backward$predictions) 
 	 if(nrow(res$backward$predictions)>0){
 	   colnames(res$backward$predictions)=c('real', 'fitted', 'upper_bound','predicted','lower_bound')
-      res$backward$predictions=within(res$backward$predictions, rm(fitted))
+      res$backward$predictions=res$backward$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
       if(length(res$backward$var_x_names)>0){
        res$backward$var_x_names=cols_Y[res$backward$var_x_names]  
       }

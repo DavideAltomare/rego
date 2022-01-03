@@ -1,9 +1,9 @@
 *rego*
 ======
 
-*Automatic time series forecasting and missing values imputation.*
+*Automatic Time Series Forecasting and Missing Value Imputation*
 
-*rego* is a machine learning algorithm for predicting and imputing time series. It can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the regressors if present. It can address large problems with hundreds or thousands of regressors and problems in which the number of regressors is greater than the number of observations. Moreover it can be used not only with time series but also with any other real valued target variable. The algorithm implemented includes a bayesian stochastic search methodology for model selection and a robust estimation based on boostrapping. *rego* is fast because all the code is C++.
+*rego* is a machine learning algorithm for predicting and imputing time series. It can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the dependent variables if present. It can address large problems with hundreds or thousands of dependent variables and problems in which the number of dependent variables is greater than the number of observations. Moreover it can be used not only for time series but also for any other real valued target variable. The algorithm implemented includes a Bayesian stochastic search methodology for model selection and a robust estimation based on bootstrapping. *rego* is fast because all the code is C++.
 
 PyPi installation
 -----------------

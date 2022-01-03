@@ -1,4 +1,4 @@
-//rego: Automatic time series forecasting and missing values imputation.
+//rego: Automatic time series forecasting and missing value imputation.
 //
 //Copyright (C) Davide Altomare and David Loris <channelattribution.io>
 //
@@ -659,12 +659,6 @@ field<mat> FBF_RS(Mat<double> Corr_c, double nobs_c, Col<double> G_base_c, doubl
 } // end function
 
 
-void xit(){
-  vector<int> v;
-  cout << "execution intentionally interrupted" << endl;
-  cout << v[0] << endl;
-}
-
 void printA(string msg)
 {
 
@@ -683,13 +677,20 @@ void printA(string msg)
 	
 }
 
+
+void xit(){
+  vector<int> v;
+  printA("execution intentionally interrupted");
+  printA(to_string(v[0]));
+}
+
 template <typename T>
 void printV(vector<T> vec,string name){
-  cout << name << ": ";
+  printA(name+": ");
   for (auto i: vec){
-    std::cout << i << ',';
+    printA(to_string(i));
   }
-  cout << endl;
+  printA("");
 }
 
 template<typename T>

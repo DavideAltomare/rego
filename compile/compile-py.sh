@@ -1,4 +1,4 @@
-# rego: Automatic time series forecasting and missing values imputation.
+# rego: Automatic time series forecasting and missing value imputation.
 #
 # Copyright (C) Davide Altomare and David Loris <channelattribution.io>
 # 
@@ -23,6 +23,7 @@ sed -i 's/\/\/\#define language_python/\#define language_py/' /tmp/build/python/
 #cd /tmp/build/python
 #python3 setup.py build_ext --inplace
 cd /tmp/build/
+pip3 uninstall rego -y
 pip3 install python/
 
 

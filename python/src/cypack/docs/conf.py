@@ -1,4 +1,4 @@
-# rego: Automatic time series forecasting and missing values imputation.
+# rego: Automatic Time Series Forecasting and Missing Value Imputation
 #
 # Copyright (C) Davide Altomare and David Loris <channelattribution.io>
 # 
@@ -33,7 +33,7 @@ copyright = '2021, Davide Altomare and David Loris'
 author = 'Davide Altomare, David Loris'
 
 # The full version, including alpha/beta/rc tags
-release = "1.2.1"
+release = "1.2.2"
 
 
 # -- General configuration ---------------------------------------------------
