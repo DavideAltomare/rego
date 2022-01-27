@@ -27,23 +27,29 @@
 #include <list>
 #include <limits> 
 #include <functional>
+#include <ctime>
 
 #define uli unsigned long int
 
-// #include <armadillo>
-#ifndef language_R
- //#define OPTIM_ENABLE_ARMA_WRAPPERS
- #include <armadillo>
+#define OPTIM_ENABLE_ARMA_WRAPPERS
+#ifdef language_py
+  #ifdef _WIN32
+    #define ARMA_DONT_USE_LAPACK
+    #define ARMA_DONT_USE_BLAS
+  #endif
 #endif
+#define ARMA_USE_CXX11
+#define ARMA_64BIT_WORD
+
+#include <armadillo>
+#include <optim.hpp>
 
 #ifdef language_R
  #define __GXX_EXPERIMENTAL_CXX0X__ 1
 
- //#include <Rcpp.h>
- #include <RcppArmadillo.h>
-
- #define ARMA_USE_CXX11
- #define ARMA_64BIT_WORD
+ #include <Rcpp.h>
+ //#include <RcppArmadillo.h>
+ //#define USE_RCPP_ARMADILLO
  
  #ifndef BEGIN_RCPP
  #define BEGIN_RCPP
@@ -64,6 +70,7 @@
 
 using namespace std;
 using namespace arma;
+
 
 
 //------------------------------------------------------------------------------------------------------------------------
@@ -95,37 +102,7 @@ double lchoose(uli n, uli k)
 } //end function
 
 
-
-double log_sum(colvec v)
-{
-
-  double lsum; 
- 
-  if(accu(v>=0)>0){
-   if(max(v)<=700){lsum=log(accu(exp(v)));} else{lsum=max(v);}
-  } else{
-   if(min(v)>=-700){lsum=log(accu(exp(v)));} else {lsum=max(v);} 
-  }
-
-  return lsum;
-
-} //end function
-
-
-
-vec sub_elem_eq(vec v, vec w, double x)
-{
-  uvec iw;
-
-  iw=find(w==x);
-  if(!iw.is_empty()){v=v.elem(iw);}else{v=datum::nan;}
-   
-  return v;
-
-} //end function
-
-
-mat sub_mat(mat M, vec vr, vec vc)
+mat sub_mat(mat* M, vec vr, vec vc)
 {
   uli r, c, lvr, lvc;
   lvr=vr.n_elem;
@@ -134,7 +111,7 @@ mat sub_mat(mat M, vec vr, vec vc)
 
   for(c=0; c<lvc; c++){
    for(r=0; r<lvr; r++){ 
-    Q(r,c)=M(vr(r),vc(c)); 
+    Q(r,c)=(*M)(vr(r),vc(c)); 
    }
   }
 
@@ -143,22 +120,121 @@ mat sub_mat(mat M, vec vr, vec vc)
 } //end function
 
 
-mat pow_vec(vec v, vec w)
+mat pow_vec(vec* v, vec* w)
 {
 
    uli k, lv; 
    vec vv;
 
-   lv=v.n_elem;
+   lv=(*v).n_elem;
    vv=zeros<vec>(lv);
 
    for(k=0; k<lv; k++){
-    vv(k)=pow(v(k),w(k));
+    vv(k)=pow((*v)(k),(*w)(k));
    }
 
  return vv;
 
 }
+
+mat Cholesky(mat* M)
+{
+    double n=(*M).n_rows;
+    mat lower(n,n);
+ 
+    // Decomposing a matrix into Lower Triangular
+    for (uli i = 0; i < n; i++) {
+        for (uli j = 0; j <= i; j++) {
+            uli sum = 0;
+ 
+            if (j == i) // summation for diagonals
+            {
+                for (uli k = 0; k < j; k++){
+                    sum += pow(lower(j,k), 2);
+                    lower(j,j) = sqrt((*M)(j,j) - sum);
+                }
+            } else {
+ 
+                // Evaluating L(i, j) using L(j, j)
+                for (uli k = 0; k < j; k++){
+                    sum += (lower(i,k) * lower(j,k));
+                    lower(i,j) = ((*M)(i,j) - sum) / lower(j,j);
+                }
+            }
+        }
+    }
+
+    return(lower);
+ 
+}
+
+
+vec forward_sub(mat* L, vec* b)
+{
+    /*x = forward_sub(L, b) is the solution to L x = b
+       L must be a lower-triangular matrix
+       b must be a vector of the same leading dimension as L
+    */
+    
+    double n = (*L).n_cols;
+    vec x = zeros<vec>(n);
+    double tmp;
+    for(double i=0; i<n; ++i){
+        tmp = (*b)(i);
+         for(double j=0; j<i; ++j){
+          tmp -= (*L)(i,j) * x(j);
+         }
+
+        x(i) = tmp / (*L)(i,i);
+    }
+    return(x);
+}
+
+vec back_sub(mat* U, vec* b)
+{
+    /*x = back_sub(U, b) is the solution to U x = b
+       U must be an upper-triangular matrix
+       b must be a vector of the same leading dimension as U
+    */
+    
+    double n = (*U).n_cols; //it must be double
+    vec x = zeros<vec>(n);
+    double tmp;
+    for(double i=n-1; i>=0; i--){
+      tmp = (*b)(i);
+       for(uli j=i; j<n; ++j){
+        tmp -= (*U)(i,j) * x(j);
+        x(i) = tmp / (*U)(i,i);
+       }
+    }
+
+    return(x);
+
+}
+
+vec solve0(mat* A, vec* b){
+ 
+  mat L=Cholesky(A);
+  mat Lt=trans(L);
+
+  vec vy=forward_sub(&L,b);
+  vec vx=back_sub(&Lt, &vy);
+  
+  return(vx);
+
+}
+
+vec solve_linear(mat* A, vec* b){
+  
+ #ifdef ARMA_DONT_USE_LAPACK
+  return(solve0(A,b));
+ #else
+  return(solve(*A,*b));
+ #endif
+ 
+
+}
+
 
 //------------------------------------------------------------------------------------------------------------------------
 //FUNCTIONS FOR STORING MODELS IN A BINARY TREE
@@ -166,11 +242,10 @@ mat pow_vec(vec v, vec w)
 
 //this function add a model "M" to "tree"
 
-field<mat> add_to_tree(vec M, double lM, uli nM, mat tree, double ltree)
+field<mat> add_to_tree(vec* M, double lM, uli nM, mat* tree, double ltree)
 {
 
- uli j;
- uli k;
+ uli j,k;
 
  field<mat> Res(2,1);
 
@@ -178,19 +253,17 @@ field<mat> add_to_tree(vec M, double lM, uli nM, mat tree, double ltree)
     
   for(j=0; j<=lM; j++){
  
-   if(M(j)==1){tree(j,0)=j+1;}
-   else{tree(j,1)=j+1;}
+   if((*M)(j)==1){(*tree)(j,0)=j+1;}
+   else{(*tree)(j,1)=j+1;}
  
   }
  
   ltree=lM; 
-  tree.row(ltree)=tree.row(ltree)*0+nM;
+  (*tree).row(ltree)=(*tree).row(ltree)*0+nM;
 
  }
 
- uli z;
- uli h;
- uli iM=datum::nan;
+ uli z,h,iM=0;
 
  if(nM>0){ //if1
    
@@ -199,39 +272,39 @@ field<mat> add_to_tree(vec M, double lM, uli nM, mat tree, double ltree)
   
   for(j=0; j<=lM; j++){ //for1  
   
-   iM=1-M(j);
+   iM=1-(*M)(j);
       
-   if(!is_finite(tree(z,iM)) && (j<=lM) ){ //if2
+   if(!is_finite((*tree)(z,iM)) && (j<=lM) ){ //if2
      
-    tree(z,iM)=h;
+    (*tree)(z,iM)=h;
      
     for(k=(j+1); k<=lM; k++){ //for2
   
-      if(M(k)==1){tree(h,0)=h+1;} else{tree(h,1)=h+1;}
+      if((*M)(k)==1){(*tree)(h,0)=h+1;} else{(*tree)(h,1)=h+1;}
       
       h=h+1;
     
     } //end for2    
 
-    iM=1-M(lM);
+    iM=1-(*M)(lM);
     ltree=h-1;
     break;
    
    } //end if2
  
-   if(j==lM){tree(z,iM)=nM; ltree=ltree+1; break;}
+   if(j==lM){(*tree)(z,iM)=nM; ltree=ltree+1; break;}
   
-   if(tree(z,iM)>=0){z=tree(z,iM);}
+   if((*tree)(z,iM)>=0){z=(*tree)(z,iM);}
   
   } //end for1
   
 
-  tree(ltree,iM)=tree(ltree,iM)*0+nM;
+  (*tree)(ltree,iM)=(*tree)(ltree,iM)*0+nM;
 
  } //end if1
 
 
- Res(0,0)=tree;
+ Res(0,0)=(*tree);
  Res(1,0)=ltree;
 
  return Res;
@@ -241,28 +314,30 @@ field<mat> add_to_tree(vec M, double lM, uli nM, mat tree, double ltree)
 
 //this function returns the possible movements from a model "M", given all the previous models visited and stored in "tree"
 
-vec mov_tree(mat tree, vec M, uli lM, vec vlM, uli max_lM)
+vec mov_tree(mat* tree, vec* M, uli lM, vec* vlM, uli max_lM)
 {
 
- uli q; uli k; uli z; uli h; uli iM2;
+ uli q, k, z, h, iM2;
  double sumM;
- vec mov(lM+1); uvec imov; uvec umov; vec mov2; vec M2;
+ vec mov(lM+1); 
+ uvec imov, umov; 
+ vec mov2, M2;
  
  
  mov.fill(-1);
- sumM=sum(M);
+ sumM=sum(*M);
  q=0;
 
  for(k=0; k<=lM; k++){ //for1
   
-  M2=M; 
-  M2(k)=1-M(k);
+  M2=(*M); 
+  M2(k)=1-(*M)(k);
   z=0;
   
   for(h=0; h<=lM; h++){ //for2
     
    iM2=1-M2(h);
-   if(!is_finite(tree(z,iM2))){mov(q)=k; q=q+1; break;} else{z=tree(z,iM2);}
+   if(!is_finite((*tree)(z,iM2))){mov(q)=k; q=q+1; break;} else{z=(*tree)(z,iM2);}
    
     } //end for2
   
@@ -280,7 +355,7 @@ vec mov_tree(mat tree, vec M, uli lM, vec vlM, uli max_lM)
   
    mov2=zeros<vec>(lM+1);
    mov2.elem(umov)=ones<vec>(mov.n_elem);
-   mov=(mov2%M)%vlM;
+   mov=(mov2%(*M))%(*vlM);
    imov=find(mov>0);
    if(!imov.is_empty()){mov=mov.elem(imov); mov=mov-1;} else{mov=datum::nan;}
   }
@@ -312,23 +387,24 @@ double log_H_h_i(double mu, double sigma, double h, double i)
 
 
 
-double log_FBF_Ga_Gb(vec G_a, vec G_b, uli edge, mat edges, mat YtY, uli add, double n, double h)
+double log_FBF_Ga_Gb(vec* G_a, vec* G_b, uli edge, mat* edges, mat* YtY, uli add, double n, double h)
 {
-
+  
   uli e1, e2, iwi;
   double i, p, b, S2, mu, sigma, logS2, ilogS2, logHhi, ilog4, log_num1, log_den1, log_w_1, log_num0i0, log_den0i0, log_w_0, log_FBF_unpasso;
   vec V1, V2, G1, V11, pa1, pa0, betah, vv(1), z1;
   uvec iw, ipa1;
-  mat e, yty, XtX, Xty, invXtX;   
+  mat e, yty, XtX, invXtX;   
+  vec Xty;
   
-  e=edges.row(edge);
+  e=(*edges).row(edge);
   e1=e(0);
   e2=e(1);
 
-  V1=edges.col(0);
-  V2=edges.col(1);
+  V1=(*edges).col(0);
+  V2=(*edges).col(1);
     
-  if(add==1){G1=G_a;}else{G1=G_b;}   
+  if(add==1){G1=(*G_a);}else{G1=(*G_b);}   
 
   V11=(V1+1)%G1;
   iw=find(V2==e2); pa1=V11.elem(iw);
@@ -339,14 +415,13 @@ double log_FBF_Ga_Gb(vec G_a, vec G_b, uli edge, mat edges, mat YtY, uli add, do
   p=pa1.n_elem;
   b=(p+2*h+1)/n;
 
-  yty=YtY(e2,e2);
+  yty=(*YtY)(e2,e2);
     
   // //calcolo w1
    
-  vv(0)=e2; Xty=sub_mat(YtY,pa1,vv);
+  vv(0)=e2; Xty=conv_to<vec>::from(sub_mat(YtY,pa1,vv));
   XtX=sub_mat(YtY,pa1,pa1);
-  betah=solve(XtX,Xty);
-  //betah=inv_sympd(XtX)*Xty;
+  betah=solve_linear(&XtX,&Xty);  
 
   S2=conv_to<double>::from(yty-(trans(Xty)*betah));
   
@@ -354,8 +429,7 @@ double log_FBF_Ga_Gb(vec G_a, vec G_b, uli edge, mat edges, mat YtY, uli add, do
   iwi=conv_to<uli>::from(iw); 
   z1=zeros<vec>(pa1.n_elem);
   z1(iwi)=1;
-  z1=solve(XtX,z1);
-  //z1=inv_sympd(XtX)*z1; 
+  z1=solve_linear(&XtX,&z1);
   
   sigma=conv_to<double>::from(z1.elem(iw));
   
@@ -390,10 +464,10 @@ double log_FBF_Ga_Gb(vec G_a, vec G_b, uli edge, mat edges, mat YtY, uli add, do
 
   if(p==0){S2=conv_to<double>::from(yty);}
   else{
-   vv(0)=e2; Xty=sub_mat(YtY,pa0,vv);
+   vv(0)=e2; Xty=conv_to<vec>::from(sub_mat(YtY,pa0,vv));
    XtX=sub_mat(YtY,pa0,pa0);
-   betah=solve(XtX,Xty);
-   //betah=inv_sympd(XtX)*Xty;
+   betah=solve_linear(&XtX,&Xty); 
+
    S2=conv_to<double>::from(yty-(trans(Xty)*betah));
   }
 
@@ -419,7 +493,7 @@ double log_FBF_Ga_Gb(vec G_a, vec G_b, uli edge, mat edges, mat YtY, uli add, do
 
 
 
-field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat edges, double n_tot_mod, double C, double maxne, double h, bool univariate)
+field<mat> FBF_heart(double nt, mat* YtY, vec* vG_base, double lcv, vec* vlcv, mat* edges, double n_tot_mod, double C, double maxne, double h, bool univariate)
 {
     
    uli t, add, edge, imq, limodR, s;
@@ -452,16 +526,16 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
 
    for(t=0; t<lcv; t++){ //for1
        
-    G=vG_base;
-    G(t)=1-vG_base(t);
+    G=(*vG_base);
+    G(t)=1-(*vG_base)(t);
     add=G(t);
     edge=t;
 
-    log_FBF_G=log_FBF_Ga_Gb(G,vG_base,edge,edges,YtY,add,nt,h);
+    log_FBF_G=log_FBF_Ga_Gb(&G,vG_base,edge,edges,YtY,add,nt,h);
     
     M_G.col(t)=G;
     
-    treeRes=add_to_tree(G,lM,t,tree,ltree);
+    treeRes=add_to_tree(&G,lM,t,&tree,ltree);
     tree=treeRes(0,0);
     ltree=conv_to<double>::from(treeRes(1,0));
         
@@ -485,7 +559,8 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
  
    } //end for1
 
- 
+   vec vtmp1,vtmp2;
+
    if(univariate==0){
    
     limodR=t-1; 
@@ -493,7 +568,6 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
 
     
     while(t<n_tot_mod){ //while1
-    //cout << t << ":" << n_tot_mod << endl;
 
      pRSMP=exp(M_log_RSMP.subvec(0,limodR)-sum_log_RSMP);
 	   pRSMP.max(i_n_mod_r);
@@ -505,8 +579,8 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
      log_FBF_t=M_log_FBF(n_mod_r);
      
      
-     vlM=vlcv+1;
-     mov=mov_tree(tree,G,lM,vlM,maxne);
+     vlM=(*vlcv)+1;
+     mov=mov_tree(&tree,&G,lM,&vlM,maxne);
    
      if(!is_finite(mov)){ //if1
       
@@ -519,7 +593,9 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
         
      } else{
         
-       qh=pow_vec((M_q+C)/(1-M_q+C), (2*(1-G))-1);
+       vtmp1=(M_q+C)/(1-M_q+C);
+       vtmp2=(2*(1-G))-1;
+       qh=pow_vec(&vtmp1, &vtmp2);
        qh=qh.elem(conv_to<uvec>::from(mov));
     
         
@@ -544,12 +620,12 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
         add=G(edge);   
        
         
-		    log_FBF1=log_FBF_Ga_Gb(G,G_t,edge,edges,YtY,add,nt,h);
-	      log_FBF_G=log_FBF1+log_FBF_t;
+        log_FBF1=log_FBF_Ga_Gb(&G,&G_t,edge,edges,YtY,add,nt,h);
+        log_FBF_G=log_FBF1+log_FBF_t;
       
         M_G.col(t)=G;
         
-        treeRes=add_to_tree(G,lM,t,tree,ltree);
+        treeRes=add_to_tree(&G,lM,t,&tree,ltree);
         tree=treeRes(0,0);
         ltree=conv_to<double>::from(treeRes(1,0));
       
@@ -601,30 +677,18 @@ field<mat> FBF_heart(double nt, mat YtY, vec vG_base, double lcv, vec vlcv, mat 
 } // end function
 
 
-mat G_fin_fill(mat G, vec vr, uli ic, vec x)
-{
-  uli k, lvr;
-  lvr=vr.n_elem;
- 
-  for(k=0; k<lvr; k++){
-    G(vr(k),ic)=x(k); 
-  }
 
-  return G;
-
-} //end function
-
-
-field<mat> FBF_RS(Mat<double> Corr_c, double nobs_c, Col<double> G_base_c, double h_c, double C_c, double n_tot_mod_c, double n_hpp_c, bool univariate)
+field<mat> FBF_RS(Mat<double>* Corr_c, double nobs_c, Col<double>* G_base_c, double h_c, double C_c, double n_tot_mod_c, double n_hpp_c, bool univariate)
 {
 
  uli neq, rr; 
  double maxne, Mlogbin_sum, lcv, rrmax, q;
  vec V1, V2, vlcv, vG_base, M_q, M_P, iM_P, M_P2;
  mat edges, G_fin, M_G, M_G2;
+ mat YtY;
  field<mat> heartRes;
  
- q=Corr_c.n_cols; 
+ q=(*Corr_c).n_cols; 
 
  maxne=nobs_c-2*h_c-2;
 
@@ -634,13 +698,11 @@ field<mat> FBF_RS(Mat<double> Corr_c, double nobs_c, Col<double> G_base_c, doubl
  V2=zeros<vec>(q-neq);
 
  edges=join_rows(V1,V2); 
-
- //edges.print("edges");
    
  lcv=V1.n_elem;
  vlcv=linspace<vec>(0,lcv-1,lcv); 
   
- vG_base=flipud(G_base_c);
+ vG_base=flipud(*G_base_c);
    
  rrmax=std::min(maxne,lcv); 
  Mlogbin_sum=0;
@@ -652,7 +714,8 @@ field<mat> FBF_RS(Mat<double> Corr_c, double nobs_c, Col<double> G_base_c, doubl
  n_tot_mod_c=std::min(Mlogbin_sum,log(n_tot_mod_c));
  n_tot_mod_c=round(exp(n_tot_mod_c)); 
 
- heartRes=FBF_heart(nobs_c, Corr_c*nobs_c, vG_base, lcv, vlcv, edges, n_tot_mod_c, C_c, maxne, h_c, univariate);
+ YtY=(*Corr_c)*nobs_c;
+ heartRes=FBF_heart(nobs_c, &YtY, &vG_base, lcv, &vlcv, &edges, n_tot_mod_c, C_c, maxne, h_c, univariate);
  
  return(heartRes);
 
@@ -780,6 +843,15 @@ uli find_consecutive_nan(T* x, uli col){
 }
 
 
+// template<typename T>
+// void save_mat(T* obj,string dir, string name, string type){
+//   struct timeval time_now{};
+//   gettimeofday(&time_now, nullptr); 
+//   time_t msecs_time = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
+//   (*obj).save(dir + name + "_" + to_string(msecs_time) + "." + type, csv_ascii);
+// }
+
+
 string f_print_perc(double num){ 
  
  string res;
@@ -813,6 +885,13 @@ vector< vector<double> >  arma_mat_to_std_mat(mat* A) {
     return V;
 }
 
+int rand11(){
+ std::random_device rd; 
+ std::mt19937 gen(rd()); 
+ std::uniform_int_distribution<> distrib(0,  RAND_MAX);
+ return(distrib(gen));
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //FUNCTIONS FOR VARIABLE SELECTION AND PREDICTIONS
@@ -827,13 +906,13 @@ struct str_input
   uli corY_nr;
   uli corY_nc;
 
-  mat* prt_MY0(){
-   return(&MY0);
-  }
+  // mat* prt_MY0(){
+  //  return(&MY0);
+  // }
   
-  mat* prt_MY(){
-   return(&MY);
-  }
+  // mat* prt_MY(){
+  //  return(&MY);
+  // }
 
 };
 
@@ -895,27 +974,56 @@ struct str_output_reg
     double L;
     double L_adj;
 
-    Col<double>* prt_vresid(){
-     return(&vresid);
-    }
+    // Col<double>* prt_vresid(){
+    //  return(&vresid);
+    // }
 };
 
-str_output_reg reg(mat* MY0, mat* MY)
+double f_loss_function(const vec& vals_inp, vec* grad_out, void* opt_data)
+{
+      
+  str_input* data = reinterpret_cast<str_input*>(opt_data);
+  mat MY=data->MY;
+
+  double err=0;
+  double fit=0;
+
+  uli n=MY.n_rows;
+
+  for(uli t=0; t<n; ++t){
+    fit=0;
+    for(uli k=0; k<vals_inp.n_rows; ++k){
+      fit=fit+vals_inp(k)*MY(t,k+1);
+    }
+    err=err+(abs(MY(t,0)-fit)/n);
+  }
+
+  return err;
+
+}
+
+str_output_reg reg(str_input* tab_input, string loss_function)
 {
      
-    mat X=(*MY).cols(1,(*MY).n_cols-1);
-    vec Y=(*MY).col(0);
+    vec vbeta;
+
+    mat X=(*tab_input).MY.cols(1,(*tab_input).MY.n_cols-1);
+    vec Y=(*tab_input).MY.col(0);
     mat XtX=trans(X)*X;
-    vec Xty=trans(X)*Y; 
-    vec vbeta=solve(XtX,Xty);
+    vec Xty=trans(X)*Y;
+    vbeta=solve_linear(&XtX,&Xty); 
+
+    if(loss_function=="MAE"){
+     optim::de(vbeta,f_loss_function,tab_input);
+    }
     //vec vbeta=inv_sympd(XtX)*Xty;
 	    
     vec vactual=Y;
     vec vfitted=X*vbeta;
     vec vresid=vactual-vfitted;
 	
-    vec vactual0=(*MY0).col(0);
-    vec vfitted0=(*MY0).cols(1,(*MY0).n_cols-1)*vbeta;
+    vec vactual0=(*tab_input).MY0.col(0);
+    vec vfitted0=(*tab_input).MY0.cols(1,(*tab_input).MY0.n_cols-1)*vbeta;
     vec vresid0=vactual0-vfitted0;
      
     str_output_reg Res;
@@ -935,6 +1043,8 @@ struct str_out_uni_select
 {
  Col<uli> vars_x_idx;
  Col<uli> vars_ar_idx; 
+ Col<double> logs_FBF;
+
 };
 
 str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double max_lag){
@@ -949,7 +1059,13 @@ str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double 
     uli max_lag0;
 
     cons_rows=(double) find_consecutive_finite(Y,0);
-    max_lag0=(uli) min(cons_rows/2,cons_rows/log(cons_rows/10));
+
+    if(log(cons_rows/10)>0){
+     max_lag0=(uli) min(cons_rows/2,cons_rows/log(cons_rows/10));
+    }else{
+     max_lag0=1; 
+    }
+
     if(max_lag==-1){
      max_lag=(double) max_lag0;
     }else if(max_lag>0){
@@ -981,9 +1097,21 @@ str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double 
     //estimate threshold
     
     nc=(*Y).n_cols;
-    mat Ynorm = randu<mat>((*Y).n_rows,100);  
+    uvec idfinite=find_finite((*Y).col(0));
+    nr=idfinite.n_rows;
 
-    mat Y0=Ynorm;
+    double qt;
+    if(nc<10){
+      qt=0.90;
+    }else{
+      qt=0.99;
+    }
+
+    uli nv1=(uli)((double)nc);
+    uli nv=std::max((uli)200,nv1);
+    
+    mat Y0 = randu<mat>(nr,nv);
+
     Col<uli> vretard0;
     tab_input=data_preparation(&Y0,vretard0);
   
@@ -992,12 +1120,14 @@ str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double 
     nvar_max=(uli)2*std::pow(tab_input.MY.n_rows,0.25);
     G_base_c=zeros<vec>(nc-1);
   
-    res=FBF_RS(tab_input.corY,nr,G_base_c,h_c,C_c,Y0.n_cols-1+vretard0.n_rows,Y0.n_cols-1+vretard0.n_rows,univariate);
+    res=FBF_RS(&tab_input.corY,nr,&G_base_c,h_c,C_c,Y0.n_cols-1+vretard0.n_rows,Y0.n_cols-1+vretard0.n_rows,univariate);
     M_log_FBF=res(3,0); 
 
-    uli nth=(uli) (0.99*M_log_FBF.size());
+    uli nth=(uli) (qt*M_log_FBF.size());
     M_log_FBF=sort(M_log_FBF);
     threshold=M_log_FBF(nth);
+
+    //cout << threshold << endl;
 
     //univariate  
   
@@ -1009,7 +1139,7 @@ str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double 
     n_tot_mod_c=(*Y).n_cols-1+(*vretard).n_rows;
     double n_hpp_c=(*Y).n_cols-1+(*vretard).n_rows;
 
-    res=FBF_RS(tab_input.corY,nr,G_base_c,h_c,C_c,n_tot_mod_c,n_hpp_c,univariate);
+    res=FBF_RS(&tab_input.corY,nr,&G_base_c,h_c,C_c,n_tot_mod_c,n_hpp_c,univariate);
 
     M_log_FBF=res(3,0);
 
@@ -1019,7 +1149,6 @@ str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double 
      ids=ids.rows(0,nvar_max-1);
      ids=sort(ids);
     }
-
 
     vec rvals=linspace<vec>(0,M_log_FBF.n_rows-1, M_log_FBF.n_rows).elem(ids);
 
@@ -1036,6 +1165,7 @@ str_out_uni_select model_univariate_selection(mat* Y, Col<uli>* vretard, double 
 	  Col<uli> tmp=(*vretard)(conv_to< uvec >::from(ids_vars_ar));
     str_out.vars_x_idx=ids_vars_x;
     str_out.vars_ar_idx=tmp;
+    str_out.logs_FBF=M_log_FBF.elem(ids);
   
     (*vretard)=(*vretard)(conv_to< uvec >::from(ids_vars_ar));
   
@@ -1054,7 +1184,7 @@ struct str_out_multi_select
  vec vbeta; 
 };
   
-str_out_multi_select model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<uli>* vretard){
+str_out_multi_select model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<uli>* vretard, string loss_function){
         
     str_out_multi_select str_out;
     Col<uli> ids_vars_x,v_ar;
@@ -1112,8 +1242,9 @@ str_out_multi_select model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_u
         } 
     
         G_base_c=zeros<vec>(nc-1);
-        
-        res=FBF_RS(tab_input.corY,nr,G_base_c,h_c,C_c,n_tot_mod_c,n_hpp_c,univariate);
+                
+        res=FBF_RS(&tab_input.corY,nr,&G_base_c,h_c,C_c,n_tot_mod_c,n_hpp_c,univariate);
+                
         M_q=res(0,0);
   
 	      ids=find(M_q>=threshold);
@@ -1142,7 +1273,7 @@ str_out_multi_select model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_u
           tab_input.MY0=tab_input.MY0.cols(urvals);
           tab_input.MY=tab_input.MY.cols(urvals);
         
-          str_output_reg tab_out_reg=reg(tab_input.prt_MY0(),tab_input.prt_MY());
+          str_output_reg tab_out_reg=reg(&tab_input, loss_function);
           vbeta_arx=tab_out_reg.vbeta;
           vresid=tab_out_reg.vresid0;
         }else{
@@ -1226,28 +1357,22 @@ map<string,double> performances(vec vactual, vec vfitted, uli nvars){
 }
 
 
-
 struct str_pred_out
 {
 
  mat predictions;
- double L=datum::nan;   
- double L_adj=datum::nan;
+ mat fitted;
+ double L;   
+ double L_adj;
  
 };
 
-str_pred_out sarimax_pred(mat* Y, Col<uli> ids_vars_x, Col<uli> ids_vars_ar, vec vbeta_arx, Col<uli> ids_vars_ma, vec vbeta_ma, bool flg_sim, vec vfitted, vec probs, uli nsim)
+
+str_pred_out sarimax_pred(mat* Y, Col<uli> ids_vars_x, Col<uli> ids_vars_ar, vec vbeta_arx, Col<uli> ids_vars_ma, vec vbeta_ma, bool flg_sim, mat Mfitted, vec probs, uli nsim, string loss_function)
 {
-
+    
   str_pred_out str_out;
-  vec vresid;   
-
-  if(flg_sim==1){ 
-   vresid=(*Y).col(0)-vfitted;
-   vresid=vresid(find_finite(vresid));
-  }else{
-    nsim=1;
-  }
+  vec vresid; 
 
   uli p=ids_vars_ar.n_rows;
   uli q=ids_vars_ma.n_rows;  
@@ -1262,6 +1387,45 @@ str_pred_out sarimax_pred(mat* Y, Col<uli> ids_vars_x, Col<uli> ids_vars_ar, vec
     maxpq=max(ids_vars_ar.max(),ids_vars_ma.max());
   }
   
+  uli npred;
+  if(flg_sim==0){
+    uli npred1=find_consecutive_nan(Y,0);
+    uli npred2=find_consecutive_finite(Y,0)-maxpq-k;
+
+    npred=min(npred1,npred2);
+    if(npred==0){
+      npred=1;
+    }
+  }else{
+    npred=Mfitted.n_cols;
+  }
+
+  
+  uli ri;
+  double rd;
+  // //random_device rdv; 
+  mt19937 gen(1234567);
+  // default_random_engine gen;
+  uniform_real_distribution<double> distrib(0.0,1.0);
+
+  // mt19937 engine(1234567);
+  // uniform_real_distribution<double> distrib(0.0,1.0);
+  // auto gen = bind(ref(distrib), ref(engine));
+
+  field<vec> Fresid(npred,1);
+  vec resid_size(npred);
+
+  if(flg_sim==1){ 
+     for(uli kpred=0; kpred<npred; ++kpred){
+       vresid=(*Y).col(0)-Mfitted.col(kpred);
+       vresid=vresid(find_finite(vresid));
+       Fresid(kpred,0)=vresid;
+       resid_size(kpred)=(double) vresid.size();
+     }
+  }else{
+    nsim=1;
+  }
+
   vec vbeta_x;
   vec vbeta_ar;
 
@@ -1274,21 +1438,25 @@ str_pred_out sarimax_pred(mat* Y, Col<uli> ids_vars_x, Col<uli> ids_vars_ar, vec
   double tar;
   double tma;
   
+  mat My_pred((*Y).n_rows, npred);
+  vec veps((*Y).n_rows);
+  field<mat> Fout(npred,1);
   mat Mout;
+  
   if(flg_sim==1){
-   Mout.resize(nsim,(*Y).n_rows);
-   Mout.fill(datum::nan);
-  }else{
-   Mout.resize((*Y).n_rows,2);
+    for(uli kpred=0; kpred<npred; ++kpred){
+     Fout(kpred,0).resize(nsim,(*Y).n_rows);
+     Fout(kpred,0).fill(datum::nan);
+    }
+    }else{  
+     for(uli kpred=0; kpred<npred; ++kpred){
+      Fout(kpred,0).resize((*Y).n_rows,2);
+    }
   }
   
-  double pred_arx=0;
+  double pred_x=0;
+  double pred_ar=0;
   double pred_ma=0;
-
-  vec veps((*Y).n_rows);
-
-  vec vy_pred((*Y).n_rows);
-
   double pred_err;
 
   uvec ut(1);
@@ -1296,20 +1464,14 @@ str_pred_out sarimax_pred(mat* Y, Col<uli> ids_vars_x, Col<uli> ids_vars_ar, vec
 
   double eps_tma;
 
-  bool flg_na_ar=0;
-  bool flg_na_ma=0;
+  bool is_na_pred_ar=0;
 
-  uli ri;
-  random_device rd; 
-  //mt19937 gen(rd());
-  mt19937 gen(1234567);
-  uniform_int_distribution<> distrib(0, vresid.n_rows-1);
 
-  uli t0;
+  uli t0, tk, last_kpred;
 
   for(uli s=0; s<nsim; ++s){
 
-    vy_pred.fill(datum::nan);
+    My_pred.fill(datum::nan);
     veps.fill(datum::nan);
 
     if(maxpq>0){
@@ -1317,121 +1479,259 @@ str_pred_out sarimax_pred(mat* Y, Col<uli> ids_vars_x, Col<uli> ids_vars_ar, vec
     }else{
      t0=0; 
     }
-    
+      
+
     for(uli t=t0; t<(*Y).n_rows; ++t){
       
-      ut(0)=t;
- 
-      //X
+      last_kpred=std::min(npred,(uli)(*Y).n_rows-t);
       
-      if(k>0){
-       pred_arx=as_scalar((*Y).submat(ut,uids_vars_x)*vbeta_x);
-      }else{
-       pred_arx=0;
-      }
+      for(uli kpred=0; kpred<last_kpred; ++kpred){ 
 
-      flg_na_ar=0;
-      flg_na_ma=0;
-  
-      //AR
-  
-      for(uli p0=0; p0<p; ++p0){
-       
-       tar=(double)t-(double)ids_vars_ar(p0);
-       
-       if(tar>0){
-        if(isfinite((*Y)(tar,0))){ 
-         pred_arx=pred_arx+(*Y)(tar,0)*vbeta_ar(p0);
-        }else{
-         pred_arx=pred_arx+vy_pred(tar)*vbeta_ar(p0);
-        }
-        flg_na_ar=0;
-       }else{
-        pred_arx=0; 
-        flg_na_ar=1;
-       }
-  
-      }
+        tk=t+kpred;
 
-      //MA
-  
-      if(q>0){
-      
-        pred_ma=0;
-    
-        for(uli q0=0; q0<q; ++q0){
-    
-         tma=(double)t-(double)ids_vars_ma(q0);
-    
-         if(tma>0){
-          eps_tma=veps(tma);
-          if(isfinite(eps_tma)){
-           pred_ma=pred_ma+eps_tma*vbeta_ma(q0);
-          }
-          flg_na_ma=0;
-         }else{
-          pred_ma=0;
-          flg_na_ma=1; 
-         }
-    
-        }
-      
-      }
-
-      if((flg_na_ar==0) & (flg_na_ma==0)){
-       vy_pred(t)=pred_arx+pred_ma; 
-      }else{
-       vy_pred(t)=datum::nan; 
-      }
-      
-      if(flg_sim==1){
-        //vz=randi<uvec>(1,distr_param(0, vresid.n_rows-1)); RcppArmadillo bug
-        //pred_err=vresid(vz(0)); 
-        ri=(uli) distrib(gen);
-        pred_err=vresid(ri);
-
-        if(isfinite((*Y)(t,0))){
-          veps(t)=(*Y)(t,0)-pred_arx;
-        }else{
-          veps(t)=pred_ma+pred_err;
-        }
+        ut(0)=tk;
+   
+        //X
         
-        if((flg_na_ar==0) & (flg_na_ma==0)){
-         vy_pred(t)=pred_arx+pred_ma+pred_err; 
+        if(k>0){
+         pred_x=as_scalar((*Y).submat(ut,uids_vars_x)*vbeta_x);
         }else{
-         vy_pred(t)=datum::nan; 
+         pred_x=0;
         }
-        Mout(s,t)=vy_pred(t);
-      }else{            
-        if(isfinite((*Y)(t,0))){
-          veps(t)=(*Y)(t,0)-pred_arx;
+                         
+        //AR
+
+        pred_ar=0;
+    
+        if(p>0){
+        
+          for(uli p0=0; p0<p; ++p0){
+           
+           tar=(double)tk-(double)ids_vars_ar(p0);
+           
+           if(tar>0){
+            if((tar<t) & (isfinite((*Y)(tar,0)))){ 
+             pred_ar=pred_ar+(*Y)(tar,0)*vbeta_ar(p0);
+            }else{ 
+             is_na_pred_ar=1;
+             for(uli z=0; z<=kpred; ++z){ 
+              if(isfinite(My_pred(tar,z))){ 
+               pred_ar=pred_ar+My_pred(tar,z)*vbeta_ar(p0);
+               is_na_pred_ar=0;
+               break;
+              }
+             }
+             if(is_na_pred_ar==1){
+               pred_ar=datum::nan;
+             }
+            }
+           }else{
+            pred_ar=datum::nan;
+            break; 
+           }
+      
+          }
+        
+        }//end if p
+    
+        pred_ma=0;
+
+        if(isfinite(pred_ar)){
+        
+          //MA
+      
+          if(q>0){
+              
+            for(uli q0=0; q0<q; ++q0){
+        
+             tma=(double)tk-(double)ids_vars_ma(q0);
+        
+             if(tma>0){
+              eps_tma=veps(tma);
+              if((tma<t) & (isfinite(eps_tma))){
+                pred_ma=pred_ma+eps_tma*vbeta_ma(q0);
+              }else{
+                pred_ma=pred_ma+0;
+              }
+             }else{
+              pred_ma=pred_ma+0;
+             }
+        
+            }
+          
+          }//end if q
+
+    
+        }
+            
+        if(isfinite(pred_ar)){
+         My_pred(tk,kpred)=pred_x+pred_ar+pred_ma; 
         }else{
-          veps(t)=pred_ma;
+         My_pred(tk,kpred)=datum::nan; 
         }
-      }
-    
-    }
-    
-  }
+            
+        if(flg_sim==1){
+                    
+          rd=distrib(gen);
+          ri=(uli)floor(resid_size(kpred)*rd);
+
+          pred_err=Fresid(kpred,0)(ri);
+
+          if(kpred==0){
+            if(isfinite((*Y)(t,0))){
+              veps(t)=(*Y)(t,0)-pred_x-pred_ar;
+            }else{
+              veps(t)=pred_ma+pred_err;
+            }
+          }
+          
+          if(isfinite(pred_ar)){
+           My_pred(tk,kpred)=pred_x+pred_ar+pred_ma+pred_err; 
+          }else{
+           My_pred(tk,kpred)=datum::nan; 
+          }
+
+          Fout(kpred,0)(s,tk)=My_pred(tk,kpred);
+
+        }else{ 
+
+          if(kpred==0){
+           if(isfinite((*Y)(t,0))){
+            veps(t)=(*Y)(t,0)-pred_x-pred_ar;
+           }else{
+            veps(t)=pred_ma;
+           }
+          }
+        
+        }
+
+      }//end kpred 
+
+    }//end t
+  
+  }//end s
   
   if(flg_sim==1){
+   
+   for(uli kpred=0; kpred<npred; ++kpred){ 
+     Fout(kpred,0)=quantile(Fout(kpred,0),probs);
+     Fout(kpred,0)=join_rows(Mfitted.col(kpred),Fout(kpred,0).t());
+     Fout(kpred,0)=join_rows((*Y).col(0),Fout(kpred,0));
+   }
+
+   if(npred>1){
+      
+     //prediction interval correction
+
+     uli kpred=0;
+     uli h_low=0, h_up=0;
+   
+     mat M_low((*Y).n_rows,3); M_low.fill(datum::nan);
+     mat M_up((*Y).n_rows,3); M_up.fill(datum::nan);
+
+     mat M0_low((*Y).n_rows,3); M0_low.fill(datum::nan);
+     M0_low.col(1)=Fout(0,0).col(2);
+     M0_low.col(2).fill(1);
+     mat M0_up((*Y).n_rows,3); M0_up.fill(datum::nan);
+     M0_up.col(1)=Fout(0,0).col(4);
+     M0_up.col(2).fill(1);
+
+     for(uli j=0; j<(*Y).n_rows; ++j){
+       if(isfinite((*Y)(j,0))==0){
+         if((kpred>0) & (kpred<npred)){
+           M_low(h_low,0)=Fout(kpred,0)(j,2);
+           M_low(h_low,1)=Fout(0,0)(j,2);
+           M_low(h_low,2)=1;
+           M0_low(j,0)=Fout(kpred,0)(j,2);
+           h_low=h_low+1;
   
-   Mout=quantile(Mout,probs);
-   Mout=join_rows(vfitted,Mout.t());
-   Mout=join_rows((*Y).col(0),Mout);
-  
+           M_up(h_up,0)=Fout(kpred,0)(j,4);
+           M_up(h_up,1)=Fout(0,0)(j,4);
+           M_up(h_up,2)=1;
+           M0_up(j,0)=Fout(kpred,0)(j,4);
+           h_up=h_up+1;
+         }
+         kpred=kpred+1;  
+       }else{
+        kpred=0; 
+       }  
+     }
+
+     str_input tab_input_ci;
+     str_output_reg reg_ci; 
+     vec vlower_bound, vupper_bound;
+     vec vquantiles_ci;
+
+     tab_input_ci.MY0=M0_low;
+     tab_input_ci.MY=M_low.rows(0,h_low-1);
+     reg_ci=reg(&tab_input_ci, loss_function);
+     vquantiles_ci=quantile(reg_ci.vresid,probs);
+     vlower_bound=reg_ci.vfitted0;
+     for(uli j=0; j<vlower_bound.n_rows; ++j){
+      vlower_bound(j)=vlower_bound(j)+vquantiles_ci(0);
+     }
+
+     tab_input_ci.MY0=M0_up;
+     tab_input_ci.MY=M_up.rows(0,h_low-1);
+     reg_ci=reg(&tab_input_ci, loss_function);
+     vquantiles_ci=quantile(reg_ci.vresid,probs);
+     vupper_bound=reg_ci.vfitted0;
+     for(uli j=0; j<vupper_bound.n_rows; ++j){
+      vupper_bound(j)=vupper_bound(j)+vquantiles_ci(2);
+     }  
+
+     Mout=Fout(0,0);
+
+     kpred=0;
+     for(uli j=0; j<(*Y).n_rows; ++j){
+       if(isfinite((*Y)(j,0))==0){
+         if((kpred>0) & (kpred<npred)){
+           if((isfinite(vlower_bound(j))) & isfinite(vupper_bound(j))){
+            Mout(j,2)=vlower_bound(j);
+            Mout(j,4)=vupper_bound(j);
+           }
+         }
+         kpred=kpred+1;  
+       }else{
+        kpred=0; 
+       }  
+     }
+
+   }else{
+
+    Mout=Fout(0,0);
+
+   }//end if(npred>1)
+
   }else{
-   
-   Mout.col(0)=(*Y).col(0);
-   Mout.col(1)=vy_pred;
 
+   uvec nonmiss;
+
+   for(uli kpred=0; kpred<npred; ++kpred){  
+     nonmiss=find_finite((*Y).col(0)-My_pred.col(kpred));
+     npred=kpred+1;
+     if(nonmiss.n_rows<20){ //20 is the number of observations over that the forecasting horizon can be considered significative    
+       break;
+     }
+   }
+  
   }
+     
+  map<string,double> mp_idx_perf;
 
-  map<string,double> mp_idx_perf=performances((*Y).col(0), vy_pred, (uli)(ids_vars_x.n_rows+ids_vars_ar.n_rows+ids_vars_ma.n_rows));
-   
+  double L, L_adj;
+  mp_idx_perf=performances((*Y).col(0), My_pred.col(0), (uli)(ids_vars_x.n_rows+ids_vars_ar.n_rows+ids_vars_ma.n_rows));
+  L=mp_idx_perf["L"];
+  L_adj=mp_idx_perf["L_adj"];
+
   str_out.predictions=Mout;
-  str_out.L=mp_idx_perf["L"];
-  str_out.L_adj=mp_idx_perf["L_adj"];
+  if(flg_sim==0){
+   str_out.fitted=My_pred.cols(0,npred-1);
+  }else{
+   str_out.fitted=My_pred; 
+  }
+  str_out.L=L;
+  str_out.L_adj=L_adj;
 
   return(str_out);
 
@@ -1457,9 +1757,9 @@ bool CheckVisited(map<vector<uli>,uli>* mv, vector<uli>* v)
   return(res);
 }
 
-pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selection_prediction(mat* Y, double max_lag, vec probs, uli nsim)
+pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selection_prediction(mat* Y, double max_lag, vec probs, uli nsim, string loss_function)
 {
-        
+          
   pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > res_out;
   
   str_model_out res_out_i;
@@ -1475,6 +1775,7 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
   
   vec vresid;
   vec vfitted, vfitted_empty;
+  mat Mfitted, Mfitted_empty;
   Col<uli> vretard, vretard_empty, vretard1;
   vector<uli> vtmp;
   vector<double> vmin_ids_vars_ar;
@@ -1488,22 +1789,29 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
   uvec u_id_regressors;
   
   //SARIX
-  
+
+ 
   out_uni_select_arx=model_univariate_selection(Y, &vretard, max_lag);
-  
-  if((flg_x_only==0) & (vretard.n_rows>0)){ //if is a sarimax
+
+  // out_uni_select_arx.vars_x_idx.print("out_uni_select_arx.ids_vars_x");
+  // out_uni_select_arx.vars_ar_idx.print("out_uni_select_arx.ids_vars_ar");
+  // out_uni_select_arx.logs_FBF.print("out_uni_select_arx.logs_FBF");
+
+  if((flg_x_only==0) & (vretard.n_rows>0)){ //if it is a sarimax
      
-   for(double i=-1; i<(double)(vretard.size()-1); ++i){
+   //for(double i=-1; i<(double)(vretard.size()-1); ++i){
+   // vretard1=vretard;
+   // if(i>=0){
+   //  vretard1.shed_rows(0,(uli)i);
+   // }
+   for(double i=0; i<1; ++i){
 
     vretard1=vretard;
-    if(i>=0){
-     vretard1.shed_rows(0,(uli)i);
-    }
 
-    out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard1);
+    out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard1, loss_function);
 
     vtmp=conv_to< vector<uli> >::from(out_multi_select_arx.ids_vars_ar);   
-      
+
     if(CheckVisited(&visited_models,&vtmp)==0){
     
        visited_models.insert(pair<vector<uli>,uli>(vtmp,0));
@@ -1514,7 +1822,7 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
        vretard1.clear();
   
        out_uni_select_ma=model_univariate_selection(&vresid, &vretard1, max_lag);
-       out_multi_select_ma=model_multivariate_selection(&vresid, &out_uni_select_ma.vars_x_idx, &vretard1);
+       out_multi_select_ma=model_multivariate_selection(&vresid, &out_uni_select_ma.vars_x_idx, &vretard1, loss_function);
        
        res_out_i.ids_vars_x=out_multi_select_arx.ids_vars_x;
        res_out_i.ids_vars_ar=out_multi_select_arx.ids_vars_ar;
@@ -1529,11 +1837,12 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
        }else{
         vmin_ids_vars_ar.push_back(-1);
        }
+       
+       out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 0, Mfitted_empty, probs, nsim, loss_function);
+       Mfitted=out_pred_i.fitted;
 
-       out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 0, vfitted_empty, probs, nsim);
-       vfitted=out_pred_i.predictions.col(1);
-       out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 1, vfitted, probs, nsim);
-
+       out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 1, Mfitted, probs, nsim, loss_function);
+ 
        res_out.first.second.push_back(out_pred_i);
 
        if(out_multi_select_arx.ids_vars_ar.n_rows==0){
@@ -1552,7 +1861,7 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
 
   if(flg_x_only==1){
     
-    out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard_empty);
+    out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard_empty, loss_function);
 
     res_out_i.ids_vars_x=out_multi_select_arx.ids_vars_x;
     res_out_i.ids_vars_ar=out_multi_select_arx.ids_vars_ar;
@@ -1562,9 +1871,9 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
 
     res_out.first.first.push_back(res_out_i);
     
-    out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 0, vfitted_empty, probs, nsim);
-    vfitted=out_pred_i.predictions.col(1);
-    out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 1, vfitted, probs, nsim);
+    out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 0, Mfitted_empty, probs, nsim, loss_function);
+    Mfitted=out_pred_i.fitted;
+    out_pred_i=sarimax_pred(Y, out_multi_select_arx.ids_vars_x, out_multi_select_arx.ids_vars_ar, out_multi_select_arx.vbeta, out_multi_select_ma.ids_vars_ar, out_multi_select_ma.vbeta, 1, Mfitted, probs, nsim, loss_function);
 
     res_out.first.second.push_back(out_pred_i);
 
@@ -1580,6 +1889,7 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
     mat final_predictions=res_out.first.second[0].predictions;
 
     double npred=0;
+
     for(uli j=0; j<(*Y).n_rows; ++j){
      
      if(j>0){
@@ -1595,7 +1905,7 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
        npred=0; 
       }
      } 
-   
+     
      if(npred>1)
      {
       
@@ -1611,6 +1921,7 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
         }
       }
       
+      mod_sel=0;
       final_predictions.row(j)=res_out.first.second[mod_sel].predictions.row(j);
      
      }
@@ -1620,7 +1931,6 @@ pair < pair< vector<str_model_out>, vector<str_pred_out> > , mat > model_selecti
     res_out.second=final_predictions;
   
   }//end else
-
   
   return(res_out);
 
@@ -1650,9 +1960,9 @@ struct str_output
 
 };
 
-str_output regpred_cpp(Mat<double>* Y, double max_lag, double alpha, uli nsim, bool flg_print, string direction="<->")
+str_output regpred_cpp(Mat<double>* Y, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function)
 {
-    
+      
   str_model_out tab_model;
   str_pred_out tab_pred;
   str_output str_out;
@@ -1688,8 +1998,8 @@ str_output regpred_cpp(Mat<double>* Y, double max_lag, double alpha, uli nsim, b
     if(flg_print==1){
      printA("Forward prediction: making model selection and prediction...");
     }
-            
-    out_sel_pred=model_selection_prediction(Y, max_lag, probs, nsim);
+                
+    out_sel_pred=model_selection_prediction(Y, max_lag, probs, nsim, loss_function);
 
     predictions=out_sel_pred.second;
     
@@ -1723,7 +2033,7 @@ str_output regpred_cpp(Mat<double>* Y, double max_lag, double alpha, uli nsim, b
      printA("Backward prediction: making model selection and prediction...");
     }
         
-    out_sel_pred=model_selection_prediction(&Yr, max_lag, probs, nsim);
+    out_sel_pred=model_selection_prediction(&Yr, max_lag, probs, nsim, loss_function);
 
     predictions_rev=reverse(out_sel_pred.second);
     
@@ -1811,13 +2121,13 @@ mat  std_mat_to_arma_mat(vector< vector<double> >* A) {
 #ifdef language_py
 
 pair < pair < list< vector<uli> >, list< vector<string> > > , pair < list< vector< vector<double> > >, list< double> > > 
-regpred_py(vector< vector<double> >& Y, double max_lag, double alpha, uli nsim, bool flg_print, string direction)
+regpred_py(vector< vector<double> >& Y, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function)
 {
 
   pair < pair < list< vector<uli> >, list< vector<string> > > , pair < list< vector< vector<double> > >, list< double> > > res;
   mat Y0=std_mat_to_arma_mat(&Y);
   
-  str_output str_out=regpred_cpp(&Y0, max_lag, alpha, nsim, flg_print, direction);
+  str_output str_out=regpred_cpp(&Y0, max_lag, alpha, nsim, flg_print, direction, loss_function);
 
   res.first.first.push_back(str_out.fw_var_x_idx);
   res.first.first.push_back(str_out.fw_var_ar_idx);
@@ -1861,7 +2171,7 @@ NumericMatrix  arma_mat_to_num_mat(mat* A) {
     return V;
 }
 
-RcppExport SEXP regpred_R(SEXP Y_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, SEXP flg_print_p, SEXP direction_p)
+RcppExport SEXP regpred_R(SEXP Y_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, SEXP flg_print_p, SEXP direction_p, SEXP loss_function_p)
 {
 
   NumericMatrix Y_0(Y_p); 
@@ -1882,7 +2192,10 @@ RcppExport SEXP regpred_R(SEXP Y_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, S
   CharacterVector direction_0(direction_p); 
   string direction = Rcpp::as<string>(direction_0);
 
-  str_output str_out=regpred_cpp(&Y, max_lag, alpha, nsim, flg_print, direction);
+  CharacterVector loss_function_0(loss_function_p); 
+  string loss_function = Rcpp::as<string>(loss_function_0);
+
+  str_output str_out=regpred_cpp(&Y, max_lag, alpha, nsim, flg_print, direction, loss_function);
   
   NumericMatrix predictions=arma_mat_to_num_mat(&str_out.predictions);
   NumericMatrix fw_predictions=arma_mat_to_num_mat(&str_out.fw_predictions);

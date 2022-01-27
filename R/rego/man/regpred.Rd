@@ -11,7 +11,8 @@
 
 
 \usage{
-  regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->")
+  regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", 
+          loss_function="MAE")
 }
 
 
@@ -22,7 +23,9 @@
   \item{nsim}{number of bootstrap replications used for producing confidence interval around predictions.}
   \item{flg_print}{if 1 some information during the evaluation will be printed.}
   \item{direction}{if "->" then only a forward prediction will be executed, if "<-" then only a backward prediction will be executed, if "<->" then both a forward than a backward prediction will be executed if possible. For imputing missing values is convenient to leave default "<->".}
+\item{loss_function}{if "MAE" then mean absolute error will be used as loss function in parameters estimation, if "MSQ" then mean squared error will be set.}
 }
+
 
 
 \value{An object of \code{class} \code{list} where result$final contains final predictions with confindence intervals and goodness of fit indices, result$forward contains the same information only for forward prediction while result$backward only for backward prediction.}
@@ -38,13 +41,11 @@
 
 \examples{
 
-\dontrun{
+#example 1: seasonal time series
 
 library(rego)
 
-#example 1: seasonal time series
-
-Data=read.csv(url("https://app.channelattribution.net/data/Data_air.csv"),header=FALSE)
+data(Data)
 
 res=regpred(Data)
 
@@ -52,7 +53,10 @@ res=regpred(Data)
 print(res$final$predictions)
 
 #print final L_adj
-print(res$final$L_adj)                                                
+print(res$final$L_adj)                       
+
+
+\dontrun{
 
 #example 2: high dimensional problem
 

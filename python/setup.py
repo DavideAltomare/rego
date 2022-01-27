@@ -7,19 +7,35 @@
 
 from setuptools import setup
 from Cython.Distutils import build_ext, Extension
-
+import platform
 # from distutils.core import setup
 # from distutils.extension import Extension
 #from Cython.Distutils import build_ext 
 
-extensions = [Extension(name="rego", 
+system=platform.system().lower()
+
+if system=="windows":
+ 
+  extensions = [Extension(name="rego", 
                         sources=["src/cypack/rego.pyx", "src/cypack/functions.cpp"],
-						include_dirs=["src/cypack/armadillo/include"], 
-						language='c++', 
-						extra_compile_args=['-std=c++11'],
-						extra_link_args=['-pthread','-llapack', '-lblas'],
-						cython_directives={"language_level":'3',"embedsignature": True})
-]
+			 include_dirs=["src/cypack/armadillo/include","src/cypack/optim-master/header_only_version"],  
+			 language='c++', 
+			 extra_compile_args=['-std=c++11'],
+			 #library_dirs=["src/cypack/dll"], libraries=['libblas','liblapack'],
+			 cython_directives={"language_level":'3',"embedsignature": True})
+  ]
+ 
+else:
+
+  extensions = [Extension(name="rego", 
+                        sources=["src/cypack/rego.pyx", "src/cypack/functions.cpp"],
+			 include_dirs=["src/cypack/armadillo/include","src/cypack/optim-master/header_only_version"], 
+			 language='c++', 
+			 extra_compile_args=['-std=c++11'],
+			 extra_link_args=['-pthread','-llapack', '-lblas'],
+			 cython_directives={"language_level":'3',"embedsignature": True})
+  ]
+
  
 setup(
 	ext_modules = extensions,    

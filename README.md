@@ -51,6 +51,7 @@ Installation from PyPi
 
 ```bash
 pip install --upgrade setuptools
+pip install wheel
 pip install Cython
 pip install pandas
 pip install rego

@@ -11,19 +11,19 @@ from libcpp.list cimport list
 from libcpp.pair cimport pair
 import pandas as pd
 
-__version="1.2.2"
+
+__version="1.3.2"
 
 print("Visit https://www.channelattribution.net/docs/rego for more information about rego")
 print("Version: " + str(__version))
-
     
 cdef extern from "functions.h":
 
-    pair[pair[list[vector[unsigned long int]],list[vector[string]]],pair[list[vector[vector[double]]],list[double]]]  regpred_py(vector[vector[double]]& Y, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction);
+    pair[pair[list[vector[unsigned long int]],list[vector[string]]],pair[list[vector[vector[double]]],list[double]]]  regpred_py(vector[vector[double]]& Y, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function);
 
 
-def __regpred_py(vector[vector[double]] Y, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction):
-    return(regpred_py(Y,max_lag,alpha,nsim,flg_print,direction))
+def __regpred_py(vector[vector[double]] Y, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function):
+    return(regpred_py(Y,max_lag,alpha,nsim,flg_print,direction,loss_function))
 
 
 #start documentation
@@ -35,7 +35,7 @@ rego is a machine learning algorithm for predicting and imputing time series. It
 
 """
         
-def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->"):
+def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE"):
 
     '''
     
@@ -51,9 +51,13 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
         number of bootstrap replications used for producing confidence interval around predictions.
     flg_print : string, optional, default None
         if 1 some information during the evaluation will be printed.
-    direction : int, default 10
+    direction : string, default "<->"
         if "->" then only a forward prediction will be executed, if "<-" then only a backward prediction will be executed, if "<->" then both a forward than a backward prediction will be executed if possible. For imputing missing values is convenient to leave default "<->".        
-            
+
+    loss_function : string, default "MAE"
+        if "MAE" then mean absolute error is used as penalty function in regressions, if "MSE" then mean squared error is used as penalty function in regressions        
+
+
     Returns
     -------
     dictionary
@@ -131,6 +135,9 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
 
     if (direction not in ["->","<-","<->"]):
        raise NameError("direction must be '->', '<-' or '<->'")
+
+    if (loss_function not in ["MAE","MSE"]):
+       raise NameError("loss_function must be 'MAE' or 'MSE'")
     
     if (max_lag == None):
         max_lag=0
@@ -145,7 +152,7 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
     Y=Data.to_numpy()
     del Data
                     
-    res0=__regpred_py(Y, max_lag, alpha, nsim, flg_print, direction.encode('utf-8'))
+    res0=__regpred_py(Y, max_lag, alpha, nsim, flg_print, direction.encode('utf-8'), loss_function.encode('utf-8'))
     
     res={'final':{},'forward':{},'backward':{}}
 

@@ -14,7 +14,7 @@
 
 }
 
-regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->"){
+regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE"){
 
     if(!("data.frame"%in%class(Data)|"data.table"%in%class(Data))){
      stop("Data must be a data.frame or a data.table")
@@ -44,6 +44,10 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
     if(!direction %in% c("->","<-","<->")){ 
        stop("direction must be '->', '<-' or '<->'")
     }
+
+    if(!loss_function %in% c("MSE","MAE")){ 
+       stop("loss_function must be 'MSE' or 'MAE'")
+    }
 	
     if(length(max_lag)==0){
         max_lag=0
@@ -56,7 +60,7 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
     Y=as.matrix(Data)
     rm(Data)
     
-    res=.Call("regpred_R", Y , max_lag, alpha, nsim, flg_print, direction)
+    res=.Call("regpred_R", Y , max_lag, alpha, nsim, flg_print, direction, loss_function)
  
     res$final$predictions=as.data.frame(res$final$predictions)
     colnames(res$final$predictions)=c('real', 'fitted', 'upper_bound','predicted','lower_bound')
@@ -67,7 +71,7 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
 	   colnames(res$forward$predictions)=c('real','fitted', 'upper_bound','predicted','lower_bound')
       res$forward$predictions=res$forward$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
       if(length(res$forward$var_x_names)>0){
-        res$forward$var_x_names=cols_Y[res$forward$var_x_names]  
+        res$forward$var_x_names=cols_Y[res$forward$var_x_names+1]  
       }
     }
 
@@ -76,7 +80,7 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
 	   colnames(res$backward$predictions)=c('real', 'fitted', 'upper_bound','predicted','lower_bound')
       res$backward$predictions=res$backward$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
       if(length(res$backward$var_x_names)>0){
-       res$backward$var_x_names=cols_Y[res$backward$var_x_names]  
+       res$backward$var_x_names=cols_Y[res$backward$var_x_names+1]  
       }
     }
 	  

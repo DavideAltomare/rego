@@ -18,5 +18,6 @@ cp ${main} /tmp/build/c++/test.cpp
 dir_princ=$PWD
 
 cd /tmp/build/c++
-g++ -I"${dir_princ}/python/src/cypack/armadillo/include" -std=c++11 functions.cpp test.cpp -o test.o -pthread  -llapack -lblas
+dir_optim=/home/Projects/GIT/personal/channelattributionpro/src
+g++ -I"${dir_princ}/python/src/cypack/armadillo/include" -I${dir_optim}"/c++/optim-master/header_only_version/" -std=c++11 functions.cpp test.cpp -o test.o -pthread  -llapack -lblas
 

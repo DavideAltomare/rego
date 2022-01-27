@@ -1,2 +1,6 @@
 include LICENSE.txt
 recursive-include src\cypack\armadillo *
+recursive-include src\cypack\optim-master *
+recursive-include src\cypack\dll *
+
+

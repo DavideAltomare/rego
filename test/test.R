@@ -11,15 +11,16 @@ library(rego)
 
 Data=read.csv("data/Data_air.csv",sep=";",header=FALSE)
 
-res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->")
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MAE")
 
 print(res$final$predictions)
 
 #USECASE 2
 
+
 Data=read.csv("data/Data_sim_1000.csv",sep=",",header=FALSE)
 
-res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->")
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE")
 
 print(res$final$predictions)
 

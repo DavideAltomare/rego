@@ -20,11 +20,17 @@ sed -i 's/\#define language_cpp/\/\/\#define language_cpp/' /tmp/build/python/sr
 sed -i 's/\/\/\#define language_python/\#define language_py/' /tmp/build/python/src/cypack/functions.cpp
 sed -i 's/\/\/\#define language_python/\#define language_py/' /tmp/build/python/src/cypack/functions.h
 
+if [ "$1" = "test" ]; then
+    now=$(date +"%Y-%m-%d %H:%M:%S")
+    sed -i "1s/^/print('${now}')\n/" /tmp/build/python/src/cypack/rego.pyx
+fi
+
 #cd /tmp/build/python
-#python3 setup.py build_ext --inplace
+# python3 setup.py build_ext --inplace
 cd /tmp/build/
-pip3 uninstall rego -y
-pip3 install python/
+python3 -m pip uninstall rego -y
+python3 -m pip --no-cache-dir install python/
+
 
 
 

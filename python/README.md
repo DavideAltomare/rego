@@ -12,6 +12,7 @@ Note! Only Python3 is supported!
 
 ```bash
 pip install --upgrade setuptools
+pip install wheel
 pip install Cython
 pip install pandas
 pip install rego

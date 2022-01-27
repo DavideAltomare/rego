@@ -1,6 +1,6 @@
-Metadata-Version: 1.2.2
+Metadata-Version: 1.3.2
 Name: rego
-Version: 1.2.2
+Version: 1.3.2
 Summary: Automatic Time Series Forecasting and Missing Value Imputation
 ### Home-page: 
 Author: Davide Altomare, David Loris
@@ -23,6 +23,7 @@ Installation
 
 ```bash
 pip install --upgrade setuptools
+pip install wheel
 pip install Cython
 pip install pandas
 pip install rego
