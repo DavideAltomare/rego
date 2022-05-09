@@ -15,19 +15,19 @@ rego is a machine learning algorithm for predicting and imputing time series. It
 \tabular{ll}{
 Package: \tab rego\cr
 Type: \tab Package\cr
-Version: \tab 1.3.2 \cr
-Date: \tab 2022-01-26 \cr
+Version: \tab 1.4.1 \cr
+Date: \tab 2022-05-08 \cr
 License: GPL3 | see file LICENCE
 }
  Package contains a function for automatic time series forecasting and missing values imputation. 
 }
 
 \author{
-  Davide Altomare (\email{info@channelattribution.net}).
+  Davide Altomare (\email{info@channelattribution.io}).
 }
 
 \references{
-\href{https://www.channelattribution.net/docs/rego}{rego Documentation}
+\href{https://channelattribution.io/docs/rego}{rego Documentation}
 }
 
 \keyword{time series forecasting}

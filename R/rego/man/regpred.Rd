@@ -11,8 +11,8 @@
 
 
 \usage{
-  regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", 
-          loss_function="MAE")
+  regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, 
+          direction="->", loss_function="MSE", model=NULL)
 }
 
 
@@ -23,23 +23,24 @@
   \item{nsim}{number of bootstrap replications used for producing confidence interval around predictions.}
   \item{flg_print}{if 1 some information during the evaluation will be printed.}
   \item{direction}{if "->" then only a forward prediction will be executed, if "<-" then only a backward prediction will be executed, if "<->" then both a forward than a backward prediction will be executed if possible. For imputing missing values is convenient to leave default "<->".}
-\item{loss_function}{if "MAE" then mean absolute error will be used as loss function in parameters estimation, if "MSQ" then mean squared error will be set.}
+  \item{loss_function}{if "MAE" then mean absolute error will be used as loss function in parameters estimation, if "MSE" then mean squared error will be set.}
+  \item{model}{estimated models from a previous train to be used in new data prediction without retraining.}
 }
 
-
-
-\value{An object of \code{class} \code{list} where result$final contains final predictions with confindence intervals and goodness of fit indices, result$forward contains the same information only for forward prediction while result$backward only for backward prediction.}
+\value{An object of \code{class} \code{list} with predictions and models.}
 
 \author{
-  Davide Altomare (\email{info@channelattribution.net}).
+  Davide Altomare (\email{info@channelattribution.io}).
 }
 
 
 \references{
-\href{https://www.channelattribution.net/docs/rego}{rego Documentation}
+\href{https://channelattribution.io/docs/rego}{rego Documentation}
 }
 
 \examples{
+
+\dontrun{
 
 #example 1: seasonal time series
 
@@ -50,25 +51,17 @@ data(Data)
 res=regpred(Data)
 
 #print final prediction 
-print(res$final$predictions)
-
-#print final L_adj
-print(res$final$L_adj)                       
-
-
-\dontrun{
+print(res$prediction)
 
 #example 2: high dimensional problem
 
-Data=read.csv(url("https://app.channelattribution.net/data/Data_sim_1000.csv"),header=FALSE)
+Data=read.csv(url("https://channelattribution.io/csv/Data_sim_1000.csv"),header=FALSE)
 
 res=regpred(Data, max_lag=NULL)
 
 #print final prediction 
-print(res$final$predictions)
+print(res$prediction)
 
-#print final L_adj
-print(res$final$L_adj)                                                
 
 }
 

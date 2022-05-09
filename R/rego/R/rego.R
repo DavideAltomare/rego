@@ -1,6 +1,6 @@
 # rego: Automatic Time Series Forecasting and Missing Value Imputation
 #
-# Copyright (C) Davide Altomare and David Loris <channelattribution.io>
+# Copyright (C) Davide Altomare and David Loris <https://channelattribution.io>
 # 
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree. 
@@ -9,12 +9,12 @@
   
 .onAttach = function(libname, pkgname) {
   
- packageStartupMessage("Visit https://www.channelattribution.net/docs/rego for more information about rego")
+ packageStartupMessage("Visit https://channelattribution.io/docs/rego for more information about rego")
  packageStartupMessage(paste0("rego ",.v))
 
 }
 
-regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE"){
+regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", model=NULL){
 
     if(!("data.frame"%in%class(Data)|"data.table"%in%class(Data))){
      stop("Data must be a data.frame or a data.table")
@@ -55,35 +55,73 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
     if(max_lag=="auto"){
         max_lag=-1
     }	
-		
+    
+   if(length(model)==0){
+      pred_only=0
+      model=list()
+   }else{
+      pred_only=1
+      if(direction=="<->"){
+        fw_model=model[['forward']]
+        bw_model=model[['backward']]
+      }else if(direction=="->"){
+        fw_model=model
+        model=list()
+        model[['forward']]=fw_model
+        model[['backward']]=fw_model
+      }else if(direction=="<-"){
+        bw_model=model
+        model=list()
+        model[['forward']]=bw_model
+        model[['backward']]=bw_model
+      }
+   }
+      
     cols_Y=colnames(Data)
     Y=as.matrix(Data)
     rm(Data)
     
-    res=.Call("regpred_R", Y , max_lag, alpha, nsim, flg_print, direction, loss_function)
+    res0=.Call("regpred_R", Y , max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, model)
  
-    res$final$predictions=as.data.frame(res$final$predictions)
-    colnames(res$final$predictions)=c('real', 'fitted', 'upper_bound','predicted','lower_bound')
-    res$final$predictions=res$final$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
-
-	 res$forward$predictions=as.data.frame(res$forward$predictions)
-	 if(nrow(res$forward$predictions)>0){
-	   colnames(res$forward$predictions)=c('real','fitted', 'upper_bound','predicted','lower_bound')
-      res$forward$predictions=res$forward$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
-      if(length(res$forward$var_x_names)>0){
-        res$forward$var_x_names=cols_Y[res$forward$var_x_names+1]  
+    res=list()
+ 
+    prediction=as.data.frame(res0$prediction$final)
+    colnames(prediction)=c('real', 'fitted', 'lower_bound','predicted','upper_bound')
+    prediction=prediction[,c('real', 'lower_bound','predicted','upper_bound')]
+    
+    if(direction=="<->"){
+      fw_prediction=as.data.frame(res0$prediction$forward)
+	   if(nrow(fw_prediction)>0){
+	     colnames(fw_prediction)=c('real','fitted', 'lower_bound','predicted','upper_bound')
+        fw_prediction=fw_prediction[,c('real', 'lower_bound','predicted','upper_bound')]
+      }
+    
+      bw_prediction=as.data.frame(res0$prediction$backward)
+	   if(nrow(bw_prediction)>0){
+	     colnames(bw_prediction)=c('real','fitted', 'lower_bound','predicted','upper_bound')
+        bw_prediction=bw_prediction[,c('real', 'lower_bound','predicted','upper_bound')]
       }
     }
-
-    res$backward$predictions=as.data.frame(res$backward$predictions) 
-	 if(nrow(res$backward$predictions)>0){
-	   colnames(res$backward$predictions)=c('real', 'fitted', 'upper_bound','predicted','lower_bound')
-      res$backward$predictions=res$backward$predictions[,c('real', 'upper_bound','predicted','lower_bound')]
-      if(length(res$backward$var_x_names)>0){
-       res$backward$var_x_names=cols_Y[res$backward$var_x_names+1]  
-      }
+    
+    if(pred_only==0){
+        fw_model=res0$model$forward
+        bw_model=res0$model$backward
     }
-	  
+    
+    if(direction=="<->"){
+      res$prediction$final=prediction
+      res$prediction$forward=fw_prediction
+      res$prediction$backward=bw_prediction
+      res$model$forward=fw_model
+      res$model$backward=bw_model
+    }else if(direction=="->"){
+       res$prediction=prediction
+       res$model=fw_model
+    }else if(direction=="<-"){
+       res$prediction=prediction
+       res$model=bw_model
+    }
+   
     return(res)
 	
 }

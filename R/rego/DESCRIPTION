@@ -1,16 +1,16 @@
 Package: rego
 Type: Package
 Title: Automatic Time Series Forecasting and Missing Value Imputation
-Version: 1.3.2
-Date: 2022-01-26
+Version: 1.4.1
+Date: 2022-05-08
 Authors@R: c(
-  person("Davide", "Altomare", email = "info@channelattribution.net", role = c("cre", "aut")),
-  person("David", "Loris", email = "david.loris@gmail.com", role = "aut")
+  person("Davide", "Altomare", email = "info@channelattribution.io", role = c("cre", "aut")),
+  person("David", "Loris", email = "david@channelattribution.io", role = "aut")
   )
-Maintainer: Davide Altomare <info@channelattribution.net>
+Maintainer: Davide Altomare <info@channelattribution.io>
 Description: Machine learning algorithm for predicting and imputing time series. It can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the dependent variables if present. It can address large problems with hundreds or thousands of dependent variables and problems in which the number of dependent variables is greater than the number of observations. Moreover it can be used not only for time series but also for any other real valued target variable. The algorithm implemented includes a Bayesian stochastic search methodology for model selection and a robust estimation based on bootstrapping. 'rego' is fast because all the code is C++.
 License: MIT + file LICENSE
-URL: https://www.channelattribution.net/docs/rego
+URL: https://channelattribution.io/docs/rego
 BugReports: https://github.com/DavideAltomare/rego/issues
 LinkingTo: Rcpp
 Imports: Rcpp

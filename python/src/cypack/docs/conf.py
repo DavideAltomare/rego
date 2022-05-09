@@ -1,6 +1,6 @@
 # rego: Automatic Time Series Forecasting and Missing Value Imputation
 #
-# Copyright (C) Davide Altomare and David Loris <channelattribution.io>
+# Copyright (C) Davide Altomare and David Loris <https://channelattribution.io>
 # 
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree. 
@@ -33,7 +33,7 @@ copyright = '2021, Davide Altomare and David Loris'
 author = 'Davide Altomare, David Loris'
 
 # The full version, including alpha/beta/rc tags
-release = "1.3.2"
+release = "1.4.1"
 
 
 # -- General configuration ---------------------------------------------------

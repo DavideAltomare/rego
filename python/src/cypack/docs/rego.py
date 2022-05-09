@@ -53,7 +53,7 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
 
     Example 1: seasonal time series
 
-    >>> Data=pd.read_csv("https://app.channelattribution.net/data/Data_air.csv",header=None)
+    >>> Data=pd.read_csv("https://channelattribution.io/data/Data_air.csv",header=None)
 
     >>> res=regpred(Data)
 
@@ -67,7 +67,7 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
 
     Example 2: high dimensional problem
 
-    >>> Data=pd.read_csv("https://app.channelattribution.net/data/Data_sim_1000.csv",header=None)
+    >>> Data=pd.read_csv("https://channelattribution.io/data/Data_sim_1000.csv",header=None)
 
     >>> res=regpred(Data, max_lag=None)
 

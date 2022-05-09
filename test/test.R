@@ -7,20 +7,84 @@
 
 library(rego)
 
+dir_princ="data/"
+
+r=c()
+
 #USECASE 1
 
-Data=read.csv("data/Data_air.csv",sep=";",header=FALSE)
+Data=read.csv(paste0(dir_princ,"Data_air.csv"),sep=";",header=FALSE)
 
-res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MAE")
 
-print(res$final$predictions)
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction,res1$prediction))
+
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<-", loss_function="MSE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<-", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction,res1$prediction))
+
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MSE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction$final,res1$prediction$final))
+
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE", model=res$model)
+
+r=c(r,all.equal(res$prediction$final,res1$prediction$final))
+
 
 #USECASE 2
 
+Data=read.csv(paste0(dir_princ,"Data_sim_1000.csv"),sep=",",header=FALSE)
 
-Data=read.csv("data/Data_sim_1000.csv",sep=",",header=FALSE)
+res=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE")
+res1=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction,res1$prediction))
+
+res=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="<-", loss_function="MSE")
+res1=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="<-", loss_function="MSE",model=res$model)
+
+r=c(r,all.equal(res$prediction,res1$prediction))
+
+res=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MSE")
+res1=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MSE",model=res$model)
+
+r=c(r,all.equal(res$prediction$final,res1$prediction$final))
+
+res=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE")
+res1=regpred(Data, max_lag=NULL, alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE",model=res$model)
+
+r=c(r,all.equal(res$prediction$final,res1$prediction$final))
+
+
+#USECASE 3
+
+Data=read.csv(paste0(dir_princ,"Data_trading.csv"),sep=";")
+
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction,res1$prediction))
+
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<-", loss_function="MSE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<-", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction,res1$prediction))
+
+res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MSE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MSE", model=res$model)
+
+r=c(r,all.equal(res$prediction$final,res1$prediction$final))
 
 res=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE")
+res1=regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="<->", loss_function="MAE", model=res$model)
 
-print(res$final$predictions)
+r=c(r,all.equal(res$prediction$final,res1$prediction$final))
 
+
+print(r)

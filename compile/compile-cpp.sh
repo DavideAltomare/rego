@@ -7,13 +7,11 @@
 
 #!/bin/bash
 
-main=$1
-
 rm -rf /tmp/build
 mkdir -p /tmp/build
 cp -r c++ /tmp/build 
 cp -r python /tmp/build 
-cp ${main} /tmp/build/c++/test.cpp
+cp /home/Projects/GIT/personal/rego/scripts/main.cpp /tmp/build/c++/test.cpp
 
 dir_princ=$PWD
 

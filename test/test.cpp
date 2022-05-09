@@ -46,7 +46,11 @@ int main(void)
  string direction;
  uli nsim;
  bool flg_print;
+ string loss_function;
+ bool pred_only=0;
+ vector < field<vec> > vmodels;
  str_output out;
+ 
 
  //USECASE 1
   
@@ -58,8 +62,9 @@ int main(void)
  alpha=0.05;
  nsim=1000;
  flg_print=1;
+ loss_function="MSE";
  
- out=regpred_cpp(&Y, max_lag, alpha, nsim, flg_print, direction);
+ out=regpred_cpp(&Y, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only,vmodels);
 
  out.predictions.print("Usecase 1 predictions");
 
@@ -73,8 +78,10 @@ int main(void)
  alpha=0.05;
  nsim=1000;
  flg_print=1;
+ loss_function="MSE";
  
- out=regpred_cpp(&Y, max_lag, alpha, nsim, flg_print, direction);
+
+ out=regpred_cpp(&Y, max_lag, alpha, nsim, flg_print, direction, loss_function,pred_only,vmodels);
 
  out.predictions.print("Usecase 2 predictions");
 

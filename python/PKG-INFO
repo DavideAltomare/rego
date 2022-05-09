@@ -1,11 +1,11 @@
-Metadata-Version: 1.3.2
+Metadata-Version: 1.4.1
 Name: rego
-Version: 1.3.2
+Version: 1.4.1
 Summary: Automatic Time Series Forecasting and Missing Value Imputation
 ### Home-page: 
 Author: Davide Altomare, David Loris
-Author-email: info@channelattribution.net
-Project-URL: Documentation, https://channelattribution.net/docs/rego
+Author-email: info@channelattribution.io
+Project-URL: Documentation, https://channelattribution.io/docs/rego
 Project-URL: Code, https://github.com/DavideAltomare/rego
 Project-URL: Issue tracker, https://github.com/DavideAltomare/rego/issues
 Description: Automatic time series forecasting and missing values imputation.
