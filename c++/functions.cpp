@@ -1045,7 +1045,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double max_lag){
   str_out_uni_select str_out;
   Col<uli> vretard;
   
-  if((max_lag!=0) | (((*Y).n_cols-1)>0)){
+  if((max_lag!=0) || (((*Y).n_cols-1)>0)){
             
     uli from_lag=1;
   
@@ -1292,7 +1292,7 @@ field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<ul
       mat M_G;
       vec M_P;
     
-      if((len_ar>0) | (Y0.n_cols>1)){
+      if((len_ar>0) || (Y0.n_cols>1)){
     	
 	      nr=tab_input.corY_nr;
         nc=tab_input.corY_nc;
@@ -1451,11 +1451,11 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
   uli k=vbeta_arx.n_rows-p; //number of regressors
 
   uli maxpq=0;
-  if((p==0) & (q!=0)){
+  if((p==0) && (q!=0)){
     maxpq=ids_vars_ma.max();
-  }else if((p!=0) & (q==0)){
+  }else if((p!=0) && (q==0)){
     maxpq=ids_vars_ar.max();
-  }else if((p!=0) & (q!=0)){
+  }else if((p!=0) && (q!=0)){
     maxpq=max(ids_vars_ar.max(),ids_vars_ma.max());
   }
   
@@ -1581,7 +1581,7 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
            tar=(double)tk-(double)ids_vars_ar(p0);
            
            if(tar>0){
-            if((tar<t) & (isfinite((*Y)(tar,0)))){ 
+            if((tar<t) && (isfinite((*Y)(tar,0)))){ 
              pred_ar=pred_ar+(*Y)(tar,0)*vbeta_ar(p0);
             }else{ 
              is_na_pred_ar=1;
@@ -1619,7 +1619,7 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
         
              if(tma>0){
               eps_tma=veps(tma);
-              if((tma<t) & (isfinite(eps_tma))){
+              if((tma<t) && (isfinite(eps_tma))){
                 pred_ma=pred_ma+eps_tma*vbeta_ma(q0);
               }else{
                 pred_ma=pred_ma+0;
@@ -1709,7 +1709,7 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
 
      for(uli j=0; j<(*Y).n_rows; ++j){
        if(isfinite((*Y)(j,0))==0){
-         if((kpred>0) & (kpred<npred)){
+         if((kpred>0) && (kpred<npred)){
            M_low(h_low,0)=Fout(kpred,0)(j,2);
            M_low(h_low,1)=Fout(0,0)(j,2);
            M_low(h_low,2)=1;
@@ -1756,7 +1756,7 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
      kpred=0;
      for(uli j=0; j<(*Y).n_rows; ++j){
        if(isfinite((*Y)(j,0))==0){
-         if((kpred>0) & (kpred<npred)){
+         if((kpred>0) && (kpred<npred)){
            if((isfinite(vlower_bound(j))) & isfinite(vupper_bound(j))){
             Mout(j,2)=vlower_bound(j);
             Mout(j,4)=vupper_bound(j);
@@ -1859,7 +1859,7 @@ str_model_selection model_selection_prediction(mat* Y, double max_lag, vec probs
     out_uni_select_arx=model_univariate_selection(Y, max_lag);
   }
   
-  if(((flg_x_only==0) & (out_uni_select_arx.vars_ar_idx.n_rows>0) & (pred_only==0)) | ((flg_x_only==0) & (pred_only==1))){ //if it is a sarimax
+  if(((flg_x_only==0) && (out_uni_select_arx.vars_ar_idx.n_rows>0) && (pred_only==0)) || ((flg_x_only==0) && (pred_only==1))){ //if it is a sarimax
      
     if(pred_only==0){
       
@@ -1968,7 +1968,7 @@ str_output regpred_cpp(mat* Y, double max_lag, double alpha, uli nsim, bool flg_
   uli nrows=(*Y).n_rows;
   
   mat Yr;
-  if((direction=="<->") | (direction=="<-")){ //do not move below
+  if((direction=="<->") || (direction=="<-")){ //do not move below
    Yr=reverse((*Y),0);
   }
 
@@ -1983,7 +1983,7 @@ str_output regpred_cpp(mat* Y, double max_lag, double alpha, uli nsim, bool flg_
   
   double L,L_adj;
   
-  if((direction=="<->") | (direction=="->")){ 
+  if((direction=="<->") || (direction=="->")){ 
                 
     //model selection
     if(flg_print==1){
@@ -2019,7 +2019,7 @@ str_output regpred_cpp(mat* Y, double max_lag, double alpha, uli nsim, bool flg_
     
   }
  
-  if((direction=="<->") | (direction=="<-")){ 
+  if((direction=="<->") || (direction=="<-")){ 
                     
     //model selection
     if(flg_print==1){
@@ -2178,10 +2178,10 @@ regpred_py(svec2& Y, double max_lag, double alpha, uli nsim, bool flg_print, str
   
   vector < field<vec> > vmodels0(2);
   if(pred_only==1){
-   if((direction=="->") | (direction=="<->")){
+   if((direction=="->") || (direction=="<->")){
     vmodels0[0]=std_vec3_to_arma_fie_vec(&vmodels[0]);
    }
-   if((direction=="<-") | (direction=="<->")){
+   if((direction=="<-") || (direction=="<->")){
     vmodels0[1]=std_vec3_to_arma_fie_vec(&vmodels[1]);
    }
   }
