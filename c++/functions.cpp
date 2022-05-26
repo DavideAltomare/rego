@@ -1301,7 +1301,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
 }
 
 
-field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<uli>* ids_vars_ar_uni, string loss_function, bool flg_const){
+field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<uli>* ids_vars_ar_uni, string loss_function, bool flg_const, bool flg_arx){
         
     Col<uli> ids_vars_x,v_ar;
     vec vbeta_arx;
@@ -1390,7 +1390,7 @@ field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<ul
           tab_input.MY0=tab_input.MY0.cols(urvals);
           tab_input.MY=tab_input.MY.cols(urvals);
         
-          if(flg_const==1){
+          if((flg_const==1) & (flg_arx==1)){
            tab_input.MY0.resize(tab_input.MY0.n_rows,tab_input.MY0.n_cols+1);
            tab_input.MY0.col(tab_input.MY0.n_cols-1)=zeros<vec>(tab_input.MY0.n_rows)+1;
 
@@ -1972,7 +1972,7 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
     if(pred_only==0){
       
       
-      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &out_uni_select_arx.vars_ar_idx, loss_function, flg_const);
+      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &out_uni_select_arx.vars_ar_idx, loss_function, flg_const, 1);
       
       
       res_out.models(0,0)=out_multi_select_arx(0,0);
@@ -1985,7 +1985,7 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
 
       out_uni_select_ma=model_univariate_selection(&vresid, from_lag, max_lag, 0);
       
-      out_multi_select_ma=model_multivariate_selection(&vresid, &out_uni_select_ma.vars_x_idx, &out_uni_select_ma.vars_ar_idx, loss_function, flg_const);
+      out_multi_select_ma=model_multivariate_selection(&vresid, &out_uni_select_ma.vars_x_idx, &out_uni_select_ma.vars_ar_idx, loss_function, flg_const, 0);
       
       res_out.models(0,3)=out_multi_select_ma(0,1);
       res_out.models(0,4)=out_multi_select_ma(0,2);
@@ -2012,7 +2012,7 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
      
     if(pred_only==0){
     
-      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard_empty, loss_function, flg_const);
+      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard_empty, loss_function, flg_const, 1);
 
       res_out.models(0,0)=out_multi_select_arx(0,0);
       res_out.models(0,1)=out_multi_select_arx(0,1);
