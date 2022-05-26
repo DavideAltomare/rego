@@ -1,6 +1,6 @@
-Metadata-Version: 1.4.1
+Metadata-Version: 1.5.1
 Name: rego
-Version: 1.4.1
+Version: 1.5.1
 Summary: Automatic Time Series Forecasting and Missing Value Imputation
 ### Home-page: 
 Author: Davide Altomare, David Loris

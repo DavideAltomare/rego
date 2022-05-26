@@ -49,13 +49,13 @@ struct str_output
 };
 
 
-str_output regpred_cpp(mat* Y, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, vector<field<vec>> models);
+str_output regpred_cpp(mat* Y, double from_lag, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, bool flg_const, bool flg_diff, vector<field<vec>> models);
 
 #ifdef language_py 
 pair < svec3, pair < svec2, svec4 > >
-regpred_py(svec2& Y, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, svec4& models);
+regpred_py(svec2& Y, double from_lag, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, bool flg_const, bool flg_diff, svec4& models);
 #endif
 
 #ifdef language_R
- RcppExport SEXP regpred_R(SEXP Y_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, SEXP flg_print_p, SEXP direction_p, SEXP loss_function_p, SEXP pred_only_p,SEXP vmodels_p);
+ RcppExport SEXP regpred_R(SEXP Y_p, SEXP from_lag_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, SEXP flg_print_p, SEXP direction_p, SEXP loss_function_p, SEXP pred_only_p, SEXP flg_const_p, SEXP flg_diff_p, SEXP vmodels_p);
 #endif

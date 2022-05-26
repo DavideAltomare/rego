@@ -1,8 +1,8 @@
 Package: rego
 Type: Package
 Title: Automatic Time Series Forecasting and Missing Value Imputation
-Version: 1.4.1
-Date: 2022-05-08
+Version: 1.5.1
+Date: 2022-05-26
 Authors@R: c(
   person("Davide", "Altomare", email = "info@channelattribution.io", role = c("cre", "aut")),
   person("David", "Loris", email = "david@channelattribution.io", role = "aut")

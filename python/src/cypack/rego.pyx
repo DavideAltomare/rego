@@ -12,7 +12,7 @@ from libcpp.pair cimport pair
 import pandas as pd
 
 
-__version="1.4.1"
+__version="1.5.1"
 
 print("Visit https://channelattribution.io/docs/rego for more information about rego")
 print("Version: " + str(__version))
@@ -24,11 +24,11 @@ print("Version: " + str(__version))
     
 cdef extern from "functions.h":
 
-    pair[vector[vector[vector[double]]],pair[vector[vector[double]],vector[vector[vector[vector[double]]]]]] regpred_py(vector[vector[double]]& Y, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, vector[vector[vector[vector[double]]]]& vmodels);
+    pair[vector[vector[vector[double]]],pair[vector[vector[double]],vector[vector[vector[vector[double]]]]]] regpred_py(vector[vector[double]]& Y, double from_lag, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, int flg_const, int flg_diff, vector[vector[vector[vector[double]]]]& vmodels);
 
 
-def __regpred_py(vector[vector[double]] Y, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, vector[vector[vector[vector[double]]]] vmodels):
-    return(regpred_py(Y,max_lag,alpha,nsim,flg_print,direction,loss_function,pred_only,vmodels))
+def __regpred_py(vector[vector[double]] Y, double from_lag, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, int flg_const, int flg_diff, vector[vector[vector[vector[double]]]] vmodels):
+    return(regpred_py(Y,from_lag,max_lag,alpha,nsim,flg_print,direction,loss_function,pred_only,flg_const,flg_diff,vmodels))
 
 
 #start documentation
@@ -40,7 +40,7 @@ rego is a machine learning algorithm for predicting and imputing time series. It
 
 """
         
-def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", model=None):
+def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", flg_const=True, flg_diff=False, model=None):
 
     '''
     
@@ -48,20 +48,24 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
     ----------
     Data : DataFrame
         data.frame containing target variable at first column and regressors if present from second to last column.
+    from_lag: int
+        minimum time lag to be considered in the autoregressive moving average part of the algorithm.
     max_lag: string
         maximum time lag to be considered in the autoregressive moving average part of the algorithm. If "auto" then the algorithm will set a suitable value. Set to 0 or None if you want to remove the autoregressive moving average part as in case of non time series data.
-    alpha : string
+    alpha : double
         significance level for the confidence interval produced around predictions. If 0.05 then the algorithm will calculate a 95\% confidence interval around predictions.
-    nsim : string
+    nsim : int
         number of bootstrap replications used for producing confidence interval around predictions.
-    flg_print : string, optional, default None
+    flg_print : bool, optional, default None
         if 1 some information during the evaluation will be printed.
     direction : string, default "->"
         if "->" then only a forward prediction will be executed, if "<-" then only a backward prediction will be executed, if "<->" then both a forward than a backward prediction will be executed if possible. For imputing missing values is convenient to leave default "<->".        
-
     loss_function : string, default "MSE"
         if "MAE" then mean absolute error is used as penalty function in regressions, if "MSE" then mean squared error is used as penalty function in regressions
-        
+    flg_const : bool, default True
+        if True then a constant is included into the model
+    flg_diff : bool, default False
+        if True and no regressor is present then if the target variable exhibits a trend, it is one-step differentiated up to two times
     model: list
         estimated models from a previous train to be used in new data prediction without retraining
 
@@ -100,7 +104,8 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
     >>> print(res['predictions'])
 
     '''
-
+    if (from_lag < 1):
+       raise NameError("from_lag must be > 1")
 
     if max_lag != None:
         if max_lag!="auto":
@@ -122,6 +127,12 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
 
     if (loss_function not in ["MAE","MSE"]):
        raise NameError("loss_function must be 'MAE' or 'MSE'")
+       
+    if (flg_const not in [0,1]):
+       raise NameError("flg_const must be 0 or 1")
+       
+    if (flg_diff not in [0,1]):
+       raise NameError("flg_diff must be 0 or 1")
     
     if (max_lag == None):
         max_lag=0
@@ -152,7 +163,7 @@ def regpred(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction=
     Y=Data.to_numpy()
     del Data
                     
-    res0=__regpred_py(Y, max_lag, alpha, nsim, flg_print, direction.encode('utf-8'), loss_function.encode('utf-8'), pred_only, model)
+    res0=__regpred_py(Y, from_lag, max_lag, alpha, nsim, flg_print, direction.encode('utf-8'), loss_function.encode('utf-8'), pred_only, flg_const, flg_diff, model)
     
     prediction=pd.DataFrame(res0[0][0])
     prediction.columns=['real','fitted','lower_bound','predicted','upper_bound']

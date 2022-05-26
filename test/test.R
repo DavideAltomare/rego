@@ -7,7 +7,7 @@
 
 library(rego)
 
-dir_princ="data/"
+dir_princ="/home/Projects/GIT/personal/rego/repo/data/"
 
 r=c()
 

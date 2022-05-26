@@ -14,12 +14,17 @@
 
 }
 
-regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", model=NULL){
+regpred=function(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", flg_const=TRUE, flg_diff=FALSE, model=NULL){
 
     if(!("data.frame"%in%class(Data)|"data.table"%in%class(Data))){
      stop("Data must be a data.frame or a data.table")
     } 
      
+    
+    if(from_lag < 1){
+       stop("from_lag must be > 1")
+    }
+    
     if(length(max_lag)>0){ 
       if(max_lag!="auto"){
         max_lag=as.numeric(max_lag)
@@ -48,40 +53,52 @@ regpred=function(Data, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direc
     if(!loss_function %in% c("MSE","MAE")){ 
        stop("loss_function must be 'MSE' or 'MAE'")
     }
+    
+    if(!flg_print %in% c(0,1)){
+       stop("flg_print must be 0 or 1")
+    }
 	
     if(length(max_lag)==0){
         max_lag=0
     }
     if(max_lag=="auto"){
         max_lag=-1
-    }	
+    }
     
-   if(length(model)==0){
-      pred_only=0
-      model=list()
-   }else{
-      pred_only=1
-      if(direction=="<->"){
-        fw_model=model[['forward']]
-        bw_model=model[['backward']]
-      }else if(direction=="->"){
-        fw_model=model
-        model=list()
-        model[['forward']]=fw_model
-        model[['backward']]=fw_model
-      }else if(direction=="<-"){
-        bw_model=model
-        model=list()
-        model[['forward']]=bw_model
-        model[['backward']]=bw_model
-      }
-   }
+    if(!flg_const %in% c(0,1)){
+       stop("flg_const must be 0 or 1")
+    }
+    
+    if(!flg_diff %in% c(0,1)){
+       stop("flg_diff must be 0 or 1")
+    }
+
+    if(length(model)==0){
+       pred_only=0
+       model=list()
+    }else{
+       pred_only=1
+       if(direction=="<->"){
+         fw_model=model[['forward']]
+         bw_model=model[['backward']]
+       }else if(direction=="->"){
+         fw_model=model
+         model=list()
+         model[['forward']]=fw_model
+         model[['backward']]=fw_model
+       }else if(direction=="<-"){
+         bw_model=model
+         model=list()
+         model[['forward']]=bw_model
+         model[['backward']]=bw_model
+       }
+    }
       
     cols_Y=colnames(Data)
     Y=as.matrix(Data)
     rm(Data)
     
-    res0=.Call("regpred_R", Y , max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, model)
+    res0=.Call("regpred_R", Y , from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, model)
  
     res=list()
  
