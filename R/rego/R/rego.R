@@ -14,7 +14,10 @@
 
 }
 
-regpred=function(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", flg_const=TRUE, flg_diff=FALSE, model=NULL){
+regpred=function(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", flg_const=TRUE, flg_diff=FALSE, model=NULL){
+
+    loss_function="MSE" 
+    h=NULL
 
     if(!("data.frame"%in%class(Data)|"data.table"%in%class(Data))){
      stop("Data must be a data.frame or a data.table")
@@ -73,6 +76,14 @@ regpred=function(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_pr
        stop("flg_diff must be 0 or 1")
     }
 
+    if(length(h)>0){ 
+     if(h%%floor(h)!=0){
+       stop("h must be integer")
+     }
+    }else{
+     h=-1 
+    }
+
     if(length(model)==0){
        pred_only=0
        model=list()
@@ -98,7 +109,7 @@ regpred=function(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_pr
     Y=as.matrix(Data)
     rm(Data)
     
-    res0=.Call("regpred_R", Y , from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, model)
+    res0=.Call("regpred_R", Y , from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, h, model)
  
     res=list()
  

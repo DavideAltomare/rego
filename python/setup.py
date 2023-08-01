@@ -32,7 +32,8 @@ else:
 			 include_dirs=["src/cypack/armadillo/include","src/cypack/optim-master/header_only_version"], 
 			 language='c++', 
 			 extra_compile_args=['-std=c++11'],
-			 extra_link_args=['-pthread','-llapack', '-lblas'],
+			 #extra_link_args=['-pthread','-llapack', '-lblas'],
+			 extra_link_args=['-pthread'],
 			 cython_directives={"language_level":'3',"embedsignature": True})
   ]
 

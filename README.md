@@ -5,16 +5,35 @@
 <br />
 *rego* is a machine learning algorithm for predicting and imputing time series. It can automatically set all the parameters needed, thus in the minimal configuration it only requires the target variable and the dependent variables if present. It can address large problems with hundreds or thousands of dependent variables and problems in which the number of dependent variables is greater than the number of observations. Moreover it can be used not only for time series but also for any other real valued target variable. The algorithm implemented includes a Bayesian stochastic search methodology for model selection and a robust estimation based on bootstrapping. *rego* is fast because all the code is C++.
 
-Installation notes
--------------------
-
-Compilation requires a C++11 compiler, lapack and blas installed. For a debian based SO, they can be easily installed running:
+Installation from PyPi
+----------------------
 
 ```bash
-apt-get install build-essential liblapack-dev libblas-dev
+pip install --upgrade setuptools
+pip install wheel
+pip install Cython
+pip install pandas
+pip install rego
 ```
 
-Installation on Windows requires Microsoft Visual C++ 14.0 or greater. (https://visualstudio.microsoft.com/it/downloads/)
+Installation from CRAN
+----------------------
+
+```bash
+R --vanilla -e 'install.packages(c("Rcpp", "RcppArmadillo"), repos="http://cran.us.r-project.org")'
+R --vanilla -e 'install.packages(c("rego"), repos="http://cran.us.r-project.org")'
+```
+
+Compilation notes
+-------------------
+
+Compilation requires a C++11 compiler. For a debian based SO, they can be easily installed running:
+
+```bash
+apt-get install build-essential
+```
+
+Compilation on Windows requires Microsoft Visual C++ 14.0 or greater. (https://visualstudio.microsoft.com/it/downloads/)
 
 
 Compiling and testing C++ code
@@ -43,27 +62,9 @@ Compiling and testing R code
 
 ```bash
 sh compile/compile-R.sh
-Rscript BATCH test/test.R
+Rscript test/test.R
 ```
 
-Installation from PyPi
-----------------------
-
-```bash
-pip install --upgrade setuptools
-pip install wheel
-pip install Cython
-pip install pandas
-pip install rego
-```
-
-Installation from CRAN
-----------------------
-
-```bash
-R --vanilla -e 'install.packages(c("Rcpp", "RcppArmadillo"), repos="http://cran.us.r-project.org")'
-R --vanilla -e 'install.packages(c("rego"), repos="http://cran.us.r-project.org")'
-```
 
 Generating Python documentation
 -------------------------------

@@ -29,7 +29,7 @@ fi
 # cd /tmp/build/python
 # python3 setup.py build_ext --inplace
 pip3 uninstall -y rego
-cd /tmp/build/
+cd /tmp/build
 python3 -m pip uninstall rego -y
 python3 -m pip --no-cache-dir install python/
 

@@ -31,12 +31,16 @@
 
 
 #define OPTIM_ENABLE_ARMA_WRAPPERS
-#ifdef language_py
-  #ifdef _WIN32
-    #define ARMA_DONT_USE_LAPACK
-    #define ARMA_DONT_USE_BLAS
-  #endif
-#endif
+
+// #ifdef language_py
+//   #ifdef _WIN32
+//     #define ARMA_DONT_USE_LAPACK
+//     #define ARMA_DONT_USE_BLAS
+//   #endif
+// #endif
+#define ARMA_DONT_USE_LAPACK
+#define ARMA_DONT_USE_BLAS
+
 #define ARMA_USE_CXX11
 #define ARMA_64BIT_WORD
 #define ARMA_DONT_PRINT_ERRORS
@@ -143,35 +147,23 @@ mat pow_vec(vec* v, vec* w)
 
 }
 
-mat Cholesky(mat* M)
-{
-    double n=(*M).n_rows;
-    mat lower(n,n);
- 
-    // Decomposing a matrix into Lower Triangular
-    for (uli i = 0; i < n; i++) {
-        for (uli j = 0; j <= i; j++) {
-            uli sum = 0;
- 
-            if (j == i) // summation for diagonals
-            {
-                for (uli k = 0; k < j; k++){
-                    sum += pow(lower(j,k), 2);
-                    lower(j,j) = sqrt((*M)(j,j) - sum);
-                }
-            } else {
- 
-                // Evaluating L(i, j) using L(j, j)
-                for (uli k = 0; k < j; k++){
-                    sum += (lower(i,k) * lower(j,k));
-                    lower(i,j) = ((*M)(i,j) - sum) / lower(j,j);
-                }
-            }
-        }
-    }
 
-    return(lower);
- 
+mat Cholesky(mat* input) {
+    double n=(*input).n_rows;
+    mat result(n,n);
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t k = 0; k < i; ++k) {
+            double value = (*input)(i, k);
+            for (size_t j = 0; j < k; ++j)
+                value -= result(i, j) * result(k, j);
+            result(i, k) = value/result(k, k);
+        }
+        double value = (*input)(i, i);
+        for (size_t j = 0; j < i; ++j)
+            value -= result(i, j) * result(i, j);
+        result(i, i) = std::sqrt(value);
+    }
+    return result;
 }
 
 
@@ -219,11 +211,12 @@ vec back_sub(mat* U, vec* b)
 }
 
 vec solve0(mat* A, vec* b){
- 
+
   mat L=Cholesky(A);
   mat Lt=trans(L);
 
   vec vy=forward_sub(&L,b);
+
   vec vx=back_sub(&Lt, &vy);
   
   return(vx);
@@ -392,7 +385,6 @@ double log_H_h_i(double mu, double sigma, double h, double i)
 } //end function
 
 
-
 double log_FBF_Ga_Gb(vec* G_a, vec* G_b, uli edge, mat* edges, mat* YtY, uli add, double n, double h)
 {
   
@@ -427,7 +419,11 @@ double log_FBF_Ga_Gb(vec* G_a, vec* G_b, uli edge, mat* edges, mat* YtY, uli add
    
   vv(0)=e2; Xty=conv_to<vec>::from(sub_mat(YtY,pa1,vv));
   XtX=sub_mat(YtY,pa1,pa1);
-  betah=solve_linear(&XtX,&Xty);
+  if(XtX.n_cols>1){
+   betah=solve_linear(&XtX,&Xty);
+  }else{
+   betah=conv_to<double>::from(Xty)/conv_to<double>::from(XtX);
+  }
 
   S2=conv_to<double>::from(yty-(trans(Xty)*betah));
   
@@ -435,7 +431,11 @@ double log_FBF_Ga_Gb(vec* G_a, vec* G_b, uli edge, mat* edges, mat* YtY, uli add
   iwi=conv_to<uli>::from(iw); 
   z1=zeros<vec>(pa1.n_elem);
   z1(iwi)=1;
-  z1=solve_linear(&XtX,&z1);
+  if(XtX.n_cols>1){
+    z1=solve_linear(&XtX,&z1);
+  }else{
+    z1=conv_to<double>::from(z1)/conv_to<double>::from(XtX);
+  }
   
   sigma=conv_to<double>::from(z1.elem(iw));
   
@@ -472,8 +472,12 @@ double log_FBF_Ga_Gb(vec* G_a, vec* G_b, uli edge, mat* edges, mat* YtY, uli add
   else{
    vv(0)=e2; Xty=conv_to<vec>::from(sub_mat(YtY,pa0,vv));
    XtX=sub_mat(YtY,pa0,pa0);
-   betah=solve_linear(&XtX,&Xty); 
-
+   if(XtX.n_cols>1){
+    betah=solve_linear(&XtX,&Xty);
+   }else{
+    betah=conv_to<double>::from(Xty)/conv_to<double>::from(XtX); 
+   }
+ 
    S2=conv_to<double>::from(yty-(trans(Xty)*betah));
   }
 
@@ -495,7 +499,6 @@ double log_FBF_Ga_Gb(vec* G_a, vec* G_b, uli edge, mat* edges, mat* YtY, uli add
   return log_FBF_unpasso;
 
 } // end function
-
 
 
 
@@ -720,7 +723,7 @@ field<mat> FBF_RS(Mat<double>* Corr_c, double nobs_c, Col<double>* G_base_c, dou
  n_tot_mod_c=std::min(Mlogbin_sum,log(n_tot_mod_c));
  n_tot_mod_c=round(exp(n_tot_mod_c)); 
 
- YtY=(*Corr_c)*nobs_c;
+ YtY=(*Corr_c)*(nobs_c-1);
  heartRes=FBF_heart(nobs_c, &YtY, &vG_base, lcv, &vlcv, &edges, n_tot_mod_c, C_c, maxne, h_c, univariate);
  
  return(heartRes);
@@ -1041,7 +1044,7 @@ struct str_out_uni_select
  
 };
 
-str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double max_lag, bool flg_diff){
+str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double max_lag, bool flg_diff, double h_c){
 
   str_out_uni_select str_out;
   Col<uli> vretard;
@@ -1081,15 +1084,21 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
       if(max_lag>0){
        vretard=linspace<Col<uli>>((uli)from_lag,(uli)max_lag,(uli)(max_lag-from_lag+1));
       }
-  
+    
       double nx=(*Y).n_cols-1;
       double nretard=vretard.n_rows;
       double nvars=nx+nretard;
       
-      double h_c=1; 
-      if(nvars>50){
-       h_c=2; 
-      } 
+      if(h_c==-1){
+       h_c=0; 
+       if(nvars>3){
+        h_c=1; 
+       } 
+       if(nvars>50){
+        h_c=2; 
+       } 
+      }
+
       double n_tot_mod_c=nvars*100;
       double C_c=0.01;
       double threshold; 
@@ -1149,6 +1158,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
         
         YtY(1,0)=as_scalar(cor(y,x));
         YtY(0,1)=YtY(1,0);
+        YtY=YtY*(nr-1);
         
         v_log_FBF(j)=log_FBF_Ga_Gb(&G_a, &G_b, edge, &edges, &YtY, add, nr, h_c);
         
@@ -1174,7 +1184,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
           MY.col(1)=(*Y).col(j+1);
           MY1=MY.rows(find_finite(sum(MY,1)));
           nr=MY1.n_rows;
-          YtY=cor(MY1);
+          YtY=cor(MY1)*(nr-1);
           
           M_log_FBF_x(j,0)=0;
           M_log_FBF_x(j,1)=j+1;
@@ -1199,7 +1209,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
             MY.col(1)=linspace<vec>(1,(*Y).n_rows,(*Y).n_rows);
             MY1=MY.rows(find_finite(sum(MY,1)));
             nr=MY1.n_rows;
-            YtY=cor(MY1);
+            YtY=cor(MY1)*(nr-1);
             fbf=log_FBF_Ga_Gb(&G_a, &G_b, edge, &edges, &YtY, add, nr, h_c);
 
             if((fbf-threshold)>0){
@@ -1236,7 +1246,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
           
           MY1=MY.rows(find_finite(sum(MY,1)));
           nr=MY1.n_rows;
-          YtY=cor(MY1);
+          YtY=cor(MY1)*(nr-1);
           
           M_log_FBF_ar(j,0)=1;
           M_log_FBF_ar(j,1)=vretard(j);
@@ -1249,11 +1259,10 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
       }
       
       M_log_FBF.shed_row(0);
-      
+
       uvec ids=find(M_log_FBF.col(2)<=threshold);
       M_log_FBF.shed_rows(ids);
-      
-      
+            
       if(M_log_FBF.n_rows>0){
       
         nvar_max=(uli)2*std::pow(idfinite.n_rows,0.25); //nb: only non missing target is considered
@@ -1301,7 +1310,7 @@ str_out_uni_select model_univariate_selection(mat* Y, double from_lag, double ma
 }
 
 
-field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<uli>* ids_vars_ar_uni, string loss_function, bool flg_const, bool flg_arx){
+field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<uli>* ids_vars_ar_uni, string loss_function, bool flg_const, bool flg_arx, double h_c){
         
     Col<uli> ids_vars_x,v_ar;
     vec vbeta_arx;
@@ -1312,10 +1321,15 @@ field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<ul
     if(nvars>0){
 
       double threshold=0.5;
-      double h_c=1; 
-      if(nvars>50){
-       h_c=2; 
-      } 
+      if(h_c==-1){
+       h_c=0; 
+       if(nvars>3){
+        h_c=1; 
+       } 
+       if(nvars>50){
+        h_c=2; 
+       } 
+      }
       double n_tot_mod_c=nvars*100;
       double C_c=0.01;
       double n_hpp_c=1;
@@ -1352,16 +1366,21 @@ field<vec> model_multivariate_selection(mat* Y, Col<uli>* ids_vars_x_uni, Col<ul
 	      nr=tab_input.corY_nr;
         nc=tab_input.corY_nc;
   
-        h_c=1; 
-        if((nc-1)>50){
-         h_c=2; 
-        } 
+        if(h_c==-1){
+         h_c=0; 
+         if(nvars>3){
+          h_c=1; 
+         } 
+         if(nvars>50){
+          h_c=2; 
+         } 
+        }
+
     
         G_base_c=zeros<vec>(nc-1);
         
         res=FBF_RS(&tab_input.corY,nr,&G_base_c,h_c,C_c,n_tot_mod_c,n_hpp_c,univariate);
-      
-                
+       
         M_q=res(0,0);
   
 	      ids=find(M_q>=threshold);
@@ -1504,6 +1523,7 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
   Col<uli> ids_vars_x=conv_to< Col<uli> >::from(models(0,0));
   Col<uli> ids_vars_ar=conv_to< Col<uli> >::from(models(0,1));
   vec vbeta_arx=models(0,2);
+
   ///
   double const0=0;
   if(flg_const==1){
@@ -1748,19 +1768,7 @@ str_pred_out sarimax_pred(mat* Y, bool flg_sim, mat Mfitted, vec probs, uli nsim
           }
         
         }
-        
-        // if(kpred==0){
-        //  cout << "--------" << endl;
-        //  cout << "tk:" << tk << endl;
-        //  cout << "pred_ma:" << pred_ma << endl;
-        //  cout << "pred_ar:" << pred_ar << endl;
-        //  cout << "eps-1:" << veps(tk-1) << endl;
-        //  cout << "eps:" << veps(tk) << endl;
-        //  cout << "target-1:" << (*Y)(tk-1,0) << endl;
-        //  cout << "target:" << (*Y)(tk,0) << endl;
-        //  cout << "pred:" << My_pred(tk,0) << endl;
-        // }
-      
+              
       }//end kpred 
       
     }//end t
@@ -1915,7 +1923,7 @@ struct str_model_selection
 };
 
 
-str_model_selection model_selection_prediction(mat* Y, double from_lag, double max_lag, vec probs, uli nsim, string loss_function, bool pred_only, bool flg_const, bool flg_diff, field<vec> models)
+str_model_selection model_selection_prediction(mat* Y, double from_lag, double max_lag, vec probs, uli nsim, string loss_function, bool pred_only, bool flg_const, bool flg_diff, field<vec> models, double h_c)
 {
 
   str_pred_out out_pred_i;
@@ -1946,7 +1954,7 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
   
   if(pred_only==0){
     
-    out_uni_select_arx=model_univariate_selection(Y, from_lag, max_lag, flg_diff);
+    out_uni_select_arx=model_univariate_selection(Y, from_lag, max_lag, flg_diff, h_c);
     
     res_out.models(0,5)=out_uni_select_arx.odiff;
     ndiff=(uli)out_uni_select_arx.odiff;
@@ -1972,7 +1980,7 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
     if(pred_only==0){
       
       
-      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &out_uni_select_arx.vars_ar_idx, loss_function, flg_const, 1);
+      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &out_uni_select_arx.vars_ar_idx, loss_function, flg_const, 1, h_c);
       
       
       res_out.models(0,0)=out_multi_select_arx(0,0);
@@ -1983,9 +1991,9 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
 
       vresid=out_multi_select_arx(0,3);
 
-      out_uni_select_ma=model_univariate_selection(&vresid, from_lag, max_lag, 0);
+      out_uni_select_ma=model_univariate_selection(&vresid, from_lag, max_lag, 0, h_c);
       
-      out_multi_select_ma=model_multivariate_selection(&vresid, &out_uni_select_ma.vars_x_idx, &out_uni_select_ma.vars_ar_idx, loss_function, flg_const, 0);
+      out_multi_select_ma=model_multivariate_selection(&vresid, &out_uni_select_ma.vars_x_idx, &out_uni_select_ma.vars_ar_idx, loss_function, flg_const, 0, h_c);
       
       res_out.models(0,3)=out_multi_select_ma(0,1);
       res_out.models(0,4)=out_multi_select_ma(0,2);
@@ -2011,20 +2019,20 @@ str_model_selection model_selection_prediction(mat* Y, double from_lag, double m
   if(flg_x_only==1){
      
     if(pred_only==0){
-    
-      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard_empty, loss_function, flg_const, 1);
+
+      out_multi_select_arx=model_multivariate_selection(Y, &out_uni_select_arx.vars_x_idx, &vretard_empty, loss_function, flg_const, 1, h_c);
 
       res_out.models(0,0)=out_multi_select_arx(0,0);
       res_out.models(0,1)=out_multi_select_arx(0,1);
       res_out.models(0,2)=out_multi_select_arx(0,2);
-      
+
       models=res_out.models;
-      
+                  
     }
-    
+          
     out_pred_i=sarimax_pred(Y, 0, Mfitted_empty, probs, nsim, loss_function, pred_only, flg_const, models);
     Mfitted=out_pred_i.fitted;
-    
+  
     out_pred_i=sarimax_pred(Y, 1, Mfitted, probs, nsim, loss_function, pred_only, flg_const, models);
     
     res_out.predictions=out_pred_i.predictions;
@@ -2092,13 +2100,17 @@ struct str_output
 
 
 
-str_output regpred_cpp(mat* Y, double from_lag, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, bool flg_const, bool flg_diff, vector < field<vec> > vmodels)
+str_output regpred_cpp(mat* Y, double from_lag, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, bool flg_const, bool flg_diff, double h_c, vector < field<vec> > vmodels)
 {
   
   str_model_out tab_model;
   str_pred_out tab_pred;
   str_output str_out;
-   
+
+  if(max_lag==0){
+   from_lag=0;
+  }
+
   double pinf=(alpha/2);
   double psup=1-(alpha/2);
 
@@ -2140,7 +2152,7 @@ str_output regpred_cpp(mat* Y, double from_lag, double max_lag, double alpha, ul
      models0=vmodels[0];
     }
     
-    out_sel_pred=model_selection_prediction(Y, from_lag, max_lag, probs, nsim, loss_function,pred_only,flg_const,flg_diff,models0);
+    out_sel_pred=model_selection_prediction(Y, from_lag, max_lag, probs, nsim, loss_function,pred_only,flg_const,flg_diff,models0,h_c);
   
     predictions=out_sel_pred.predictions;
 
@@ -2176,7 +2188,7 @@ str_output regpred_cpp(mat* Y, double from_lag, double max_lag, double alpha, ul
      models0=vmodels[1];
     }
     
-    out_sel_pred=model_selection_prediction(&Yr, from_lag, max_lag, probs, nsim, loss_function,pred_only,flg_const,flg_diff,models0);
+    out_sel_pred=model_selection_prediction(&Yr, from_lag, max_lag, probs, nsim, loss_function,pred_only,flg_const,flg_diff,models0,h_c);
 
     predictions_rev=reverse(out_sel_pred.predictions);
     
@@ -2318,7 +2330,7 @@ svec3 arma_fie_vec_to_std_vec3(field<vec>* A){
 
 
 pair < svec3, pair < svec2, svec4 > > 
-regpred_py(svec2& Y, double from_lag, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, bool flg_const, bool flg_diff, svec4& vmodels){
+regpred_py(svec2& Y, double from_lag, double max_lag, double alpha, uli nsim, bool flg_print, string direction, string loss_function, bool pred_only, bool flg_const, bool flg_diff, double h_c, svec4& vmodels){
   
   mat Y0=std_vec2_to_arma_mat(&Y);
   
@@ -2332,7 +2344,7 @@ regpred_py(svec2& Y, double from_lag, double max_lag, double alpha, uli nsim, bo
    }
   }
     
-  str_output str_out=regpred_cpp(&Y0, from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, vmodels0);
+  str_output str_out=regpred_cpp(&Y0, from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, h_c, vmodels0);
 
   //store predictions
     
@@ -2457,7 +2469,7 @@ List arma_fie_vec_to_R_List2_vec(field<vec>* F){
   
 }
 
-RcppExport SEXP regpred_R(SEXP Y_p, SEXP from_lag_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, SEXP flg_print_p, SEXP direction_p, SEXP loss_function_p, SEXP pred_only_p, SEXP flg_const_p, SEXP flg_diff_p, SEXP vmodels_p)
+RcppExport SEXP regpred_R(SEXP Y_p, SEXP from_lag_p, SEXP max_lag_p, SEXP alpha_p, SEXP nsim_p, SEXP flg_print_p, SEXP direction_p, SEXP loss_function_p, SEXP pred_only_p, SEXP flg_const_p, SEXP flg_diff_p, SEXP h_c_p, SEXP vmodels_p)
 {
 
   NumericMatrix Y_0(Y_p); 
@@ -2492,7 +2504,10 @@ RcppExport SEXP regpred_R(SEXP Y_p, SEXP from_lag_p, SEXP max_lag_p, SEXP alpha_
   
   NumericVector flg_diff_0(flg_diff_p);
   bool flg_diff = Rcpp::as<bool>(flg_diff_0);
-  
+
+  NumericVector h_c_0(h_c_p); 
+  double h_c = Rcpp::as<double>(h_c_0);
+
   List vmodels(vmodels_p);
   
   vector < field<vec> > vmodels0(2);
@@ -2505,7 +2520,7 @@ RcppExport SEXP regpred_R(SEXP Y_p, SEXP from_lag_p, SEXP max_lag_p, SEXP alpha_
    bw_models=vmodels[1];
   }
 
-  str_output str_out=regpred_cpp(&Y, from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, vmodels0);
+  str_output str_out=regpred_cpp(&Y, from_lag, max_lag, alpha, nsim, flg_print, direction, loss_function, pred_only, flg_const, flg_diff, h_c, vmodels0);
   
   //store predictions
   

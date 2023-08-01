@@ -12,7 +12,7 @@ from libcpp.pair cimport pair
 import pandas as pd
 
 
-__version="1.5.1"
+__version="1.6.1"
 
 print("Visit https://channelattribution.io/docs/rego for more information about rego")
 print("Version: " + str(__version))
@@ -24,11 +24,11 @@ print("Version: " + str(__version))
     
 cdef extern from "functions.h":
 
-    pair[vector[vector[vector[double]]],pair[vector[vector[double]],vector[vector[vector[vector[double]]]]]] regpred_py(vector[vector[double]]& Y, double from_lag, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, int flg_const, int flg_diff, vector[vector[vector[vector[double]]]]& vmodels);
+    pair[vector[vector[vector[double]]],pair[vector[vector[double]],vector[vector[vector[vector[double]]]]]] regpred_py(vector[vector[double]]& Y, double from_lag, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, int flg_const, int flg_diff, double h_c, vector[vector[vector[vector[double]]]]& vmodels);
 
 
-def __regpred_py(vector[vector[double]] Y, double from_lag, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, int flg_const, int flg_diff, vector[vector[vector[vector[double]]]] vmodels):
-    return(regpred_py(Y,from_lag,max_lag,alpha,nsim,flg_print,direction,loss_function,pred_only,flg_const,flg_diff,vmodels))
+def __regpred_py(vector[vector[double]] Y, double from_lag, double max_lag, double alpha, unsigned long int nsim, int flg_print, string direction, string loss_function, int pred_only, int flg_const, int flg_diff, double h_c, vector[vector[vector[vector[double]]]] vmodels):
+    return(regpred_py(Y,from_lag,max_lag,alpha,nsim,flg_print,direction,loss_function,pred_only,flg_const,flg_diff,h_c,vmodels))
 
 
 #start documentation
@@ -40,7 +40,7 @@ rego is a machine learning algorithm for predicting and imputing time series. It
 
 """
         
-def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", loss_function="MSE", flg_const=True, flg_diff=False, model=None):
+def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, direction="->", flg_const=True, flg_diff=False, model=None):
 
     '''
     
@@ -60,8 +60,6 @@ def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1
         if 1 some information during the evaluation will be printed.
     direction : string, default "->"
         if "->" then only a forward prediction will be executed, if "<-" then only a backward prediction will be executed, if "<->" then both a forward than a backward prediction will be executed if possible. For imputing missing values is convenient to leave default "<->".        
-    loss_function : string, default "MSE"
-        if "MAE" then mean absolute error is used as penalty function in regressions, if "MSE" then mean squared error is used as penalty function in regressions
     flg_const : bool, default True
         if True then a constant is included into the model
     flg_diff : bool, default False
@@ -104,6 +102,10 @@ def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1
     >>> print(res['predictions'])
 
     '''
+
+    loss_function="MSE" 
+    h=None 
+
     if (from_lag < 1):
        raise NameError("from_lag must be > 1")
 
@@ -133,6 +135,12 @@ def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1
        
     if (flg_diff not in [0,1]):
        raise NameError("flg_diff must be 0 or 1")
+
+    if h != None:
+        if (type(h) != int):
+            raise NameError("flg_diff must be 0 or 1")
+    else:
+        h=-1
     
     if (max_lag == None):
         max_lag=0
@@ -163,7 +171,7 @@ def regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1
     Y=Data.to_numpy()
     del Data
                     
-    res0=__regpred_py(Y, from_lag, max_lag, alpha, nsim, flg_print, direction.encode('utf-8'), loss_function.encode('utf-8'), pred_only, flg_const, flg_diff, model)
+    res0=__regpred_py(Y, from_lag, max_lag, alpha, nsim, flg_print, direction.encode('utf-8'), loss_function.encode('utf-8'), pred_only, flg_const, flg_diff, h, model)
     
     prediction=pd.DataFrame(res0[0][0])
     prediction.columns=['real','fitted','lower_bound','predicted','upper_bound']

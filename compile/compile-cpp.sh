@@ -7,15 +7,21 @@
 
 #!/bin/bash
 
+dir_rego=/home/Projects/GIT/personal/rego/repo
+
+file_main=$1
+
 rm -rf /tmp/build
 mkdir -p /tmp/build
-cp -r c++ /tmp/build 
-cp -r python /tmp/build 
-cp /home/Projects/GIT/personal/rego/scripts/main.cpp /tmp/build/c++/test.cpp
+cp -r c++ /tmp/build  
+cp $file_main /tmp/build/c++/main.cpp
 
 dir_princ=$PWD
 
 cd /tmp/build/c++
-dir_optim=/home/Projects/GIT/personal/channelattributionpro/src
-g++ -I"${dir_princ}/python/src/cypack/armadillo/include" -I${dir_optim}"/c++/optim-master/header_only_version/" -std=c++11 functions.cpp test.cpp -o test.o -pthread  -llapack -lblas
+dir_optim=${dir_rego}/libs/optim-master/header_only_version
+dir_armadillo=${dir_rego}/libs/armadillo/include
+# g++ -I${dir_armadillo} -I${dir_optim}"/header_only_version/" -std=c++11 functions.cpp main.cpp -o main.o -pthread  -llapack -lblas
+g++ -I${dir_armadillo} -I${dir_optim} -std=c++11 functions.cpp main.cpp -o main.o -pthread
+
 

@@ -12,7 +12,7 @@
 
 \usage{
   regpred(Data, from_lag=1, max_lag="auto", alpha=0.05, nsim=1000, flg_print=1, 
-          direction="->", loss_function="MSE", flg_const=TRUE, flg_diff=FALSE, model=NULL)
+          direction="->", flg_const=TRUE, flg_diff=FALSE, model=NULL)
 }
 
 
@@ -24,7 +24,6 @@
   \item{nsim}{number of bootstrap replications used for producing confidence interval around predictions.}
   \item{flg_print}{if 1 some information during the evaluation will be printed.}
   \item{direction}{if "->" then only a forward prediction will be executed, if "<-" then only a backward prediction will be executed, if "<->" then both a forward than a backward prediction will be executed if possible. For imputing missing values is convenient to leave default "<->".}
-  \item{loss_function}{if "MAE" then mean absolute error will be used as loss function in parameters estimation, if "MSE" then mean squared error will be set.}
   \item{flg_const}{if 1 then a constant is included into the model.}
   \item{flg_diff}{if 1 and no regressor is present then if the target variable exhibits a trend, it is one-step differentiated up to two times.}
   \item{model}{estimated models from a previous train to be used in new data prediction without retraining.}
