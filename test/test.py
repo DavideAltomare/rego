@@ -9,8 +9,6 @@
 import pandas as pd
 from rego import *
 
-r=[]
-
 #USECASE 1
 
 Data=pd.read_csv("data/Data_air.csv",sep=";",header=None)
