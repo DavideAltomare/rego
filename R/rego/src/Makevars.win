@@ -3,4 +3,4 @@
 CXX_STD = CXX11
 PKG_CPPFLAGS = -I../inst/include/armadillo/include -I../inst/include/optim-master/header_only_version
 #PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -ftrack-macro-expansion=0
-PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(FLIBS) -ftrack-macro-expansion=0
+PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(FLIBS)
