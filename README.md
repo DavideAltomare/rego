@@ -41,7 +41,7 @@ Compiling and testing C++ code
 
 ```bash
 sh compile/compile-cpp.sh test/test.cpp
-/tmp/build/c++/test.o
+/tmp/build/c++/main.o
 ```
 
 Compiling and testing Python code
